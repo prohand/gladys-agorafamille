@@ -13,7 +13,7 @@
 
 import { WIDGET_COLORS } from '@gladysassistant/integration-sdk';
 import { createLogger } from '../logging.js';
-import { PAGES } from '../agora/endpoints.js';
+import { ENDPOINTS, PAGES } from '../agora/endpoints.js';
 import { addDays, daysBetween, formatDay } from '../agora/dates.js';
 import { EXPECTED_STATUSES, RESERVATION_STATUS } from '../agora/parse.js';
 import {
@@ -99,34 +99,36 @@ export function buildWidgetContent({ gladys, config, snapshot, error, language =
   });
 
   const children = (snapshot?.children ?? []).slice(0, MAX_CHILDREN);
-  if (children.length > 0) {
-    components.push(
-      {
-        type: 'button',
-        label: say({ en: 'Absence', fr: 'Absence', de: 'Abwesenheit', es: 'Ausencia' }),
-        icon: 'user-x',
-        style: 'secondary',
-        action: {
-          key: WIDGET_ACTIONS.ABSENCE,
-          fields: formFields(children, snapshot.today),
-        },
+  // A request the integration cannot make yet (its address not captured,
+  // see endpoints.js) gets no button: one that always fails is worse.
+  if (children.length > 0 && ENDPOINTS.absence.path) {
+    components.push({
+      type: 'button',
+      label: say({ en: 'Absence', fr: 'Absence', de: 'Abwesenheit', es: 'Ausencia' }),
+      icon: 'user-x',
+      style: 'secondary',
+      action: {
+        key: WIDGET_ACTIONS.ABSENCE,
+        fields: formFields(children, snapshot.today),
       },
-      {
-        type: 'button',
-        label: say({
-          en: 'Book a lunch',
-          fr: 'Réserver un repas',
-          de: 'Essen buchen',
-          es: 'Reservar comida',
-        }),
-        icon: 'calendar',
-        style: 'secondary',
-        action: {
-          key: WIDGET_ACTIONS.RESERVE,
-          fields: formFields(children, snapshot.today),
-        },
+    });
+  }
+  if (children.length > 0 && ENDPOINTS.reserve.path) {
+    components.push({
+      type: 'button',
+      label: say({
+        en: 'Book a lunch',
+        fr: 'Réserver un repas',
+        de: 'Essen buchen',
+        es: 'Reservar comida',
+      }),
+      icon: 'calendar',
+      style: 'secondary',
+      action: {
+        key: WIDGET_ACTIONS.RESERVE,
+        fields: formFields(children, snapshot.today),
       },
-    );
+    });
   }
 
   components.push({

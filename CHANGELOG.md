@@ -25,6 +25,15 @@ Release.
   amount, amount paid, due date, state.
 - The messages are read with the request of the portal (`API_DASHBOARD/emailLogs`): the last
   ten, with their subject, sender, date and whether they were read.
+- Invoices and messages are asked as the portal's code asks them: a POST of the list query
+  (order, page size, page, filter), not a GET.
+- The children and their first names come from the menu of the sign-in answer (`kids/<id>`
+  links), as the portal pages read them.
+- An answer of the portal with a negative `TYPE_RESULT` (its way of saying an error, an expired
+  session among them) is no longer read as an empty planning, which showed "nothing booked" for
+  every child: the integration signs in again once, then reports the portal's error.
+- The widget shows the Absence and "Book a lunch" buttons only once their portal requests are
+  known.
 - An **Agora Famille** account device (balance due, next invoice, last message) and one device
   per child (today's and tomorrow's bookings, canteen today and tomorrow).
 - Scene triggers: a new invoice, an invoice due soon, a message received, a booking that

@@ -56,8 +56,16 @@ export class AgoraError extends Error {
   }
 }
 
-/** Thrown internally when the portal answers its login page instead of data. */
-class SessionExpired extends Error {}
+/**
+ * Thrown internally when the portal answers its login page instead of data,
+ * or a read with a negative TYPE_RESULT (`answer` then holds it).
+ */
+class SessionExpired extends Error {
+  constructor(answer = null) {
+    super('Session expired');
+    this.answer = answer;
+  }
+}
 
 export class AgoraClient {
   /**
@@ -80,6 +88,7 @@ export class AgoraClient {
     this.sessionId = null;
     this.refYear = null;
     this.targets = [];
+    this.menuChildren = [];
     this.signedIn = false;
   }
 
@@ -166,7 +175,13 @@ export class AgoraClient {
     }
     // The children of the account, as the planning names them (`1001$0`),
     // when the login answer carries them.
+    this.menuChildren = childrenOfMenus(answer);
     this.targets = collectTargets(answer);
+    for (const child of this.menuChildren) {
+      if (!this.targets.includes(`${child.id}$0`)) {
+        this.targets.push(`${child.id}$0`);
+      }
+    }
     if (!this.sessionId && this.cookies.size === 0) {
       throw new AgoraError(
         ERROR_CODES.FORMAT,
@@ -177,7 +192,7 @@ export class AgoraClient {
     this.signedIn = true;
     logger.info(
       `Signed in to the portal (answer fields: ${fieldNames || 'none'}; ` +
-        `${this.targets.length} child target(s) found)`,
+        `${this.targets.length} child target(s) found, ${this.menuChildren.length} in the menu)`,
     );
   }
 
@@ -232,6 +247,14 @@ export class AgoraClient {
   }
 
   async getChildren() {
+    if (!this.signedIn) {
+      await this.login();
+    }
+    // The portal pages list the children in the menu of the sign-in answer
+    // (`kids/<id>` links): no request of their own when it does.
+    if (!ENDPOINTS.children.path && this.menuChildren.length > 0) {
+      return this.menuChildren;
+    }
     return parseChildren(await this.call(ENDPOINTS.children, { step: 'children' }));
   }
 
@@ -268,13 +291,22 @@ export class AgoraClient {
   }
 
   async getInvoices() {
-    return parseInvoices(
-      await this.call(ENDPOINTS.invoices, { query: ENDPOINTS.invoices.params, step: 'invoices' }),
-    );
+    return parseInvoices(await this.read(ENDPOINTS.invoices, 'invoices'));
   }
 
   async getMessages() {
-    return parseMessages(await this.call(ENDPOINTS.messages, { step: 'messages' }));
+    return parseMessages(await this.read(ENDPOINTS.messages, 'messages'));
+  }
+
+  /** A read the portal pages make as a POST of a list query (order, page, filter). */
+  async read(endpoint, step) {
+    return this.call(endpoint, {
+      query: endpoint.params,
+      body: endpoint.body ? JSON.stringify(endpoint.body) : undefined,
+      contentType: endpoint.body ? 'application/json' : undefined,
+      read: true,
+      step,
+    });
   }
 
   /** Ask to book one day of an activity. Resolves once the portal accepted the request. */
@@ -327,6 +359,18 @@ export class AgoraClient {
       try {
         return await this.requestJson(endpoint, options);
       } catch (retryErr) {
+        if (retryErr instanceof SessionExpired && retryErr.answer) {
+          // Refused again with a fresh session: the portal's own error.
+          const portalMessage = this.mask(failureMessage(retryErr.answer) ?? '') || null;
+          logger.warn(
+            `"${options.step}" refused by the portal: ${this.mask(describeStatus(retryErr.answer))}`,
+          );
+          throw new AgoraError(
+            ERROR_CODES.FORMAT,
+            `"${options.step}" refused by the portal${portalMessage ? `: ${portalMessage}` : ''}`,
+            { step: options.step, portalMessage },
+          );
+        }
         if (retryErr instanceof SessionExpired) {
           throw new AgoraError(ERROR_CODES.AUTH, 'The portal keeps answering its login page', {
             step: options.step,
@@ -360,14 +404,28 @@ export class AgoraClient {
       this.signedIn = false;
       throw new SessionExpired();
     }
+    let answer;
     try {
-      return await readJson(response);
+      answer = await readJson(response);
     } catch {
       throw new AgoraError(ERROR_CODES.FORMAT, `"${options.step}" did not answer JSON`, {
         status: response.status,
         step: options.step,
       });
     }
+    // The API answers its errors with HTTP 200 and a negative TYPE_RESULT
+    // (an expired session among them). Read as data, such an answer was an
+    // empty planning: "nothing booked" shown for every child. A read is
+    // tried again once with a fresh session; a request (a booking) is not,
+    // its refusal is the caller's to report.
+    if (endpoint.method === 'GET' || options.read) {
+      const typeResult = Number(field(answer, 'type_result'));
+      if (Number.isFinite(typeResult) && typeResult < 0) {
+        this.signedIn = false;
+        throw new SessionExpired(answer);
+      }
+    }
+    return answer;
   }
 
   async send(endpoint, { query, body, contentType, step }) {
@@ -618,6 +676,39 @@ function encodeQuery(value) {
     .replace(/%24/g, '$')
     .replace(/%2C/g, ',')
     .replace(/%2F/g, '/');
+}
+
+/**
+ * The children of the menu of the sign-in answer. The portal pages build
+ * their menu from `DATA.MENUS[].MENU_ITEMS[].PAGES[]`, each with a `NAME`
+ * and an `HREF`; a child's page is the `kids/<id>` route (pck_home's
+ * kids_controller reads `$routeParams.idKid`).
+ *
+ * @returns {Array<{id: string, firstName: string, lastName: null, name: string}>}
+ */
+export function childrenOfMenus(answer) {
+  const children = [];
+  const visit = (node, depth) => {
+    if (!node || typeof node !== 'object' || depth > 6) {
+      return;
+    }
+    if (Array.isArray(node)) {
+      node.forEach((child) => visit(child, depth + 1));
+      return;
+    }
+    const href = field(node, 'href');
+    const name = field(node, 'name');
+    const match = typeof href === 'string' ? /(?:^|[#/])kids\/(\d+)/i.exec(href) : null;
+    if (match && typeof name === 'string' && name.trim()) {
+      if (!children.some((child) => child.id === match[1])) {
+        const firstName = name.trim();
+        children.push({ id: match[1], firstName, lastName: null, name: firstName });
+      }
+    }
+    Object.values(node).forEach((child) => visit(child, depth + 1));
+  };
+  visit(field(answer, 'data'), 0);
+  return children;
 }
 
 /** Every `<id>$<n>` value of an answer, once each: the targets of the planning. */

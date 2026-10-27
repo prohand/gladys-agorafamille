@@ -63,6 +63,11 @@ src/i18n.js, messages.js  { en, fr, de, es } texts
   `session_id: null`, `ref_year: null`, `a_access: agora` (captured from a real browser); the
   session id answered goes back in `session_id`. A 401/403 (or a login page / redirect on older
   portals) means "session expired": `client.js` signs in again once.
+- **The portal's own code is public** (`https://portalssl.agoraplus.fr/<commune>/pck_*`, e.g.
+  `pck_home.home_login_service`, `pck_transversal_objects.process_service`): read it to map a
+  request before guessing. Lists (invoices, messages) are POSTs of `{order, limit, page,
+filter}`; errors are HTTP 200 with a negative `TYPE_RESULT` and `ERROR.MESSAGE`; children are
+  the `kids/<id>` entries of `DATA.MENUS` in the sign-in answer.
 - **Data requests not captured yet have `path: null`**: the client signs in, then throws
   `UNMAPPED` naming the step. Never invent a path: capture it ("Copy as cURL" in the browser).
   Tests give them `InternalApi/TEST/<name>` through `useTestPaths()` (test/helpers/fakePortal.js).

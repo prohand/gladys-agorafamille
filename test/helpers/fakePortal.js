@@ -124,10 +124,37 @@ export function createFakePortal(data = {}) {
             TARGETS: portal.children.map((child) => `${child.idEnfant}$0`),
           },
           CGU_ACCEPTED: 1,
+          // The menu the portal pages build their side bar from: a child's
+          // page is the `kids/<id>` route.
+          MENUS: portal.noMenu
+            ? []
+            : [
+                {
+                  GROUP_LABEL: 'Ma famille',
+                  MENU_ITEMS: [
+                    {
+                      NAME: 'Mes enfants',
+                      TYPE: 'group',
+                      HREF: '',
+                      PAGES: portal.children.map((child) => ({
+                        NAME: child.prenom,
+                        TYPE: 'link',
+                        HREF: `client_home_view$#/kids/${child.idEnfant}`,
+                      })),
+                    },
+                  ],
+                },
+              ],
         },
         ERROR: null,
         TYPE_RESULT: 1,
       });
+    }
+
+    // The API answers its errors with HTTP 200 and a negative TYPE_RESULT.
+    if (portal.failReads > 0 && path !== ENDPOINTS.encryptPassword.path) {
+      portal.failReads -= 1;
+      return json({ DATA: null, ERROR: { ID: '7', MESSAGE: 'Session invalide' }, TYPE_RESULT: -1 });
     }
 
     if (!portal.sessions.has(headers.session_id)) {

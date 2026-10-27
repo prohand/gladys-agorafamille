@@ -1,6 +1,12 @@
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { AgoraClient, ERROR_CODES, encodePassword, frenchDate } from '../src/agora/client.js';
+import {
+  AgoraClient,
+  ERROR_CODES,
+  childrenOfMenus,
+  encodePassword,
+  frenchDate,
+} from '../src/agora/client.js';
 import { ENDPOINTS } from '../src/agora/endpoints.js';
 import { BASE, createFakePortal, useTestPaths } from './helpers/fakePortal.js';
 
@@ -200,7 +206,8 @@ test('a refused login logs what the portal answered, secrets masked', async (t) 
 });
 
 test('a request not captured yet is said as such, after a successful sign-in', async (t) => {
-  const portal = createFakePortal();
+  // No menu to read the children from either.
+  const portal = createFakePortal({ noMenu: true });
   const client = clientFor(portal);
   const path = ENDPOINTS.children.path;
   ENDPOINTS.children.path = null;
@@ -235,13 +242,29 @@ test('the invoices are asked the way the portal pages ask them', async () => {
   await clientFor(portal).getInvoices();
   const request = portal.requests.at(-1);
   assert.equal(request.url, `${BASE}/InternalApi/API_DASHBOARD/invoicesAgpGrid?state=all`);
+  // A POST of the grid's list query, as in the portal's code.
+  assert.equal(request.method, 'POST');
+  assert.deepEqual(JSON.parse(request.body), {
+    order: 'ID_INVOICE DESC',
+    limit: 20,
+    page: 1,
+    filter: '%',
+  });
   assert.equal(request.headers.session_id, 's1');
 });
 
 test('the messages are asked the way the portal pages ask them', async () => {
   const portal = createFakePortal();
   await clientFor(portal).getMessages();
-  assert.equal(portal.requests.at(-1).url, `${BASE}/InternalApi/API_DASHBOARD/emailLogs/0/1`);
+  const request = portal.requests.at(-1);
+  assert.equal(request.url, `${BASE}/InternalApi/API_DASHBOARD/emailLogs/0/1`);
+  assert.equal(request.method, 'POST');
+  assert.deepEqual(JSON.parse(request.body), {
+    order: 'SEND_DATE DESC',
+    limit: 10,
+    page: 1,
+    filter: '%',
+  });
 });
 
 test('the requests carry a French language and name the integration', async () => {
@@ -302,4 +325,68 @@ test('a staff account (USER_TYPE_ID 1) is turned away like the portal does', asy
     code: ERROR_CODES.AUTH,
     message: 'This account is not a family account',
   });
+});
+
+test('a read answered with a negative TYPE_RESULT signs in again, never reads as empty', async () => {
+  const portal = createFakePortal({
+    invoices: [{ numFacture: 'F1', libelle: 'Octobre', montant: 10 }],
+  });
+  const client = clientFor(portal);
+  await client.getChildren();
+  portal.failReads = 1;
+  const invoices = await client.getInvoices();
+  assert.equal(invoices.length, 1);
+  assert.equal(portal.requests.filter((r) => r.path === ENDPOINTS.login.path).length, 2);
+});
+
+test("a read refused again after a fresh sign-in is the portal's error", async () => {
+  const portal = createFakePortal();
+  const client = clientFor(portal);
+  await client.getChildren();
+  portal.failReads = 5;
+  await assert.rejects(client.getInvoices(), {
+    code: ERROR_CODES.FORMAT,
+    step: 'invoices',
+    portalMessage: 'Session invalide',
+  });
+});
+
+test('the children come from the menu of the sign-in answer', async (t) => {
+  const portal = createFakePortal();
+  const client = clientFor(portal);
+  const path = ENDPOINTS.children.path;
+  ENDPOINTS.children.path = null;
+  t.after(() => {
+    ENDPOINTS.children.path = path;
+  });
+  const children = await client.getChildren();
+  assert.deepEqual(
+    children.map((child) => [child.id, child.name]),
+    [
+      ['101', 'Léa'],
+      ['102', 'Tom'],
+    ],
+  );
+  // Only the two sign-in requests: no request for the children.
+  assert.equal(portal.requests.length, 2);
+});
+
+test('only kids/<id> menu entries are children', () => {
+  const answer = {
+    DATA: {
+      MENUS: [
+        {
+          MENU_ITEMS: [
+            { NAME: 'Factures', HREF: 'client_home_view$#/invoices', PAGES: [] },
+            { NAME: 'Inès', HREF: 'client_home_view$#/kids/77', PAGES: [] },
+            { NAME: 'Inès', HREF: 'client_home_view$#/kids/77', PAGES: [] },
+          ],
+        },
+      ],
+    },
+  };
+  assert.deepEqual(childrenOfMenus(answer), [
+    { id: '77', firstName: 'Inès', lastName: null, name: 'Inès' },
+  ]);
+  assert.deepEqual(childrenOfMenus({ DATA: null }), []);
 });

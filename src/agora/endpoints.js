@@ -51,7 +51,11 @@ export const ENDPOINTS = {
     field: 'text',
     passwordEncoding: 'base64',
   },
-  /** The children of the family. Not captured yet. */
+  /**
+   * The children of the family. No request of their own: the portal pages
+   * read them in the menu of the sign-in answer (`kids/<id>` links, see
+   * childrenOfMenus in client.js).
+   */
   children: { method: 'GET', path: null },
   /**
    * The planning of the children over a window of days. Captured from the
@@ -73,10 +77,13 @@ export const ENDPOINTS = {
    * Answers `{ DATA: { count, data: [{ idInvoice, FACT_DESC, total,
    * TOTAL_PAID, limitDatePayment, STATUS }] } }` (see src/agora/parse.js).
    */
+  // The portal's code (pck_transversal_objects.pay_invoices_comp_service)
+  // POSTs it, with the list query of its invoice grid.
   invoices: {
-    method: 'GET',
+    method: 'POST',
     path: 'InternalApi/API_DASHBOARD/invoicesAgpGrid',
     params: { state: 'all' },
+    body: { order: 'ID_INVOICE DESC', limit: 20, page: 1, filter: '%' },
   },
   /**
    * The last messages of the municipality, newest first (10 a page).
@@ -85,7 +92,13 @@ export const ENDPOINTS = {
    * Answers `{ DATA: { count, data: [{ ID_NOTIFICATIONS, SUBJECT, SENDER,
    * SEND_DATE, IS_READ, BODY }] }, ERROR, TYPE_RESULT }`.
    */
-  messages: { method: 'GET', path: 'InternalApi/API_DASHBOARD/emailLogs/0/1' },
+  // `0/1` is the family side ("front office") of the list; the portal's
+  // code (process_service.getEmailLogs) POSTs it with its list query.
+  messages: {
+    method: 'POST',
+    path: 'InternalApi/API_DASHBOARD/emailLogs/0/1',
+    body: { order: 'SEND_DATE DESC', limit: 10, page: 1, filter: '%' },
+  },
   /** Ask to book one day of an activity. Not captured yet. */
   reserve: { method: 'POST', path: null },
   /** Ask to cancel one booked day of an activity. Not captured yet. */

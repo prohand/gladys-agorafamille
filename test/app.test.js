@@ -303,6 +303,7 @@ test('the password never reaches the logs', async (t) => {
 });
 
 test('without the children request, the integration still works', async (t) => {
+  // (the menu of the fake answer names them)
   const path = ENDPOINTS.children.path;
   ENDPOINTS.children.path = null;
   t.after(() => {
@@ -313,7 +314,7 @@ test('without the children request, the integration still works', async (t) => {
   assert.equal(gladys.fake.connectionStatus.connected, true);
   const ack = await gladys.fake.action('test_connection', {});
   const message = ack.data.message ?? ack.data;
-  assert.match(message.fr, /Enfants : Enfant 101, Enfant 102/);
+  assert.match(message.fr, /Enfants : Léa, Tom/);
   assert.match(message.fr, /1 facture\(s\) à payer/);
   assert.match(message.fr, /1 message\(s\) non lu\(s\)/);
 });
@@ -332,7 +333,7 @@ test('without the encryption request, the Configuration screen names it', async 
   assert.match(message.fr, /chiffrement du mot de passe/);
 });
 
-test('without the children request, the children come from the planning', async (t) => {
+test('without the children request, the children come from the sign-in menu', async (t) => {
   const path = ENDPOINTS.children.path;
   ENDPOINTS.children.path = null;
   t.after(() => {
@@ -342,7 +343,38 @@ test('without the children request, the children come from the planning', async 
   t.after(() => app.stop());
   assert.deepEqual(
     gladys.fake.discoveredDevices.map((device) => device.name),
-    ['Agora Famille', 'Enfant 101', 'Enfant 102'],
+    ['Agora Famille', 'Léa', 'Tom'],
   );
   assert.equal(gladys.fake.connectionStatus.connected, true);
+});
+
+test('without menu nor children request, the children come from the planning', async (t) => {
+  const path = ENDPOINTS.children.path;
+  ENDPOINTS.children.path = null;
+  t.after(() => {
+    ENDPOINTS.children.path = path;
+  });
+  const portal = family();
+  portal.noMenu = true;
+  const { gladys, app } = await start(portal);
+  t.after(() => app.stop());
+  assert.deepEqual(
+    gladys.fake.discoveredDevices.map((device) => device.name),
+    ['Agora Famille', 'Enfant 101', 'Enfant 102'],
+  );
+});
+
+test('the widget offers no button for a request not captured yet', async (t) => {
+  restorePaths();
+  t.after(() => {
+    restorePaths = useTestPaths();
+  });
+  const { gladys, app } = await start();
+  t.after(() => app.stop());
+  const ack = await gladys.fake.widgetGet(FAMILY_WIDGET, { settings: {}, language: 'fr' });
+  const content = ack.data.content ?? ack.data;
+  const actions = content.components
+    .filter((component) => component.type === 'button' && component.action)
+    .map((component) => component.action.key);
+  assert.deepEqual(actions, [WIDGET_ACTIONS.REFRESH]);
 });
