@@ -19,6 +19,10 @@ Release.
 - The planning answer of the API (`DATA.EVENTS`) is read: day, activity, child and whether the
   day is booked. Until the request listing the children is known, the children are the ones the
   planning names ("Enfant <id>").
+- The planning is asked with the request of the portal (`API_CALENDAR_COMPONENT/events`), for
+  the children found in the sign-in answer.
+- The invoice answer of the API is read: amount, amount paid, due date, state. Invoices and
+  messages whose request is not known yet are "not read yet", not a failure.
 - An **Agora Famille** account device (balance due, next invoice, last message) and one device
   per child (today's and tomorrow's bookings, canteen today and tomorrow).
 - Scene triggers: a new invoice, an invoice due soon, a message received, a booking that

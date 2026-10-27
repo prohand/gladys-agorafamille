@@ -236,6 +236,26 @@ export function describeSnapshot(snapshot) {
         }),
       );
     }
+    if (!snapshot.modules.invoices) {
+      parts.push(
+        pick(language, {
+          en: 'Invoices: not read yet.',
+          fr: 'Factures : pas encore lues.',
+          de: 'Rechnungen: noch nicht gelesen.',
+          es: 'Facturas: aún no leídas.',
+        }),
+      );
+    }
+    if (!snapshot.modules.messages) {
+      parts.push(
+        pick(language, {
+          en: 'Messages: not read yet.',
+          fr: 'Messages : pas encore lus.',
+          de: 'Nachrichten: noch nicht gelesen.',
+          es: 'Mensajes: aún no leídos.',
+        }),
+      );
+    }
     if (snapshot.modules.messages) {
       const unread = unreadMessages(snapshot).length;
       parts.push(

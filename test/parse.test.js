@@ -219,3 +219,22 @@ test('the planning of the API (DATA.EVENTS) is read', async () => {
   assert.equal(booked.status, RESERVATION_STATUS.RESERVED);
   assert.deepEqual([...new Set(planning.map((entry) => entry.childId))].sort(), ['4412', '9268']);
 });
+
+test('the invoices of the API (DATA.data) are read', async () => {
+  // Shape captured from a real portal (October 2026), names and amounts
+  // replaced; the October invoice is made partly paid to cover a balance.
+  const payload = JSON.parse(
+    await readFile(new URL('./fixtures/invoices.json', import.meta.url), 'utf8'),
+  );
+  const invoices = parseInvoices(payload);
+  assert.deepEqual(
+    invoices.map((invoice) => [invoice.id, invoice.paid, invoice.remaining, invoice.dueOn]),
+    [
+      ['192500', false, 68.4, '2026-11-20'],
+      ['191977', true, 0, '2026-10-23'],
+      ['189119', true, 0, '2026-08-25'],
+    ],
+  );
+  assert.equal(invoices[0].label, 'Facturation periscolaire Octobre 2026');
+  assert.equal(invoices[0].issuedOn, '2026-10-01');
+});

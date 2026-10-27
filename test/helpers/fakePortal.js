@@ -77,6 +77,7 @@ export function createFakePortal(data = {}) {
     const path = target.pathname.replace(/^\//, '');
     const headers = options.headers ?? {};
     const request = {
+      url: String(url),
       path,
       method: options.method,
       query: Object.fromEntries(target.searchParams),
@@ -96,7 +97,14 @@ export function createFakePortal(data = {}) {
       sessionCounter += 1;
       const id = `s${sessionCounter}`;
       portal.sessions.add(id);
-      return json({ SUCCESS: true, SESSION_ID: id, REF_YEAR: 2026, USER: { NAME: 'Martin' } });
+      // Where the real answer lists the children is not known yet: the
+      // client looks for `<id>$<n>` values anywhere in it.
+      return json({
+        SUCCESS: true,
+        SESSION_ID: id,
+        REF_YEAR: 2026,
+        USER: { NAME: 'Martin', TARGETS: portal.children.map((child) => `${child.idEnfant}$0`) },
+      });
     }
 
     if (!portal.sessions.has(headers.session_id)) {

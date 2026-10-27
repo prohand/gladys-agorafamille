@@ -35,8 +35,20 @@ export const ENDPOINTS = {
   },
   /** The children of the family. Not captured yet. */
   children: { method: 'GET', path: null },
-  /** The planning of every child over a window of days. Not captured yet. */
-  planning: { method: 'GET', path: null, query: { from: 'p_date_debut', to: 'p_date_fin' } },
+  /**
+   * The planning of the children over a window of days. Captured from the
+   * portal (October 2026):
+   * GET /InternalApi/API_CALENDAR_COMPONENT/events/?idContext=1
+   *     &targets=4412$0,9268$0&startDate=26/10/2026&endDate=01/11/2026
+   * `targets` are the children (`<person id>$0`), dates are dd/mm/yyyy.
+   * Answers `{ DATA: { EVENTS: [...] } }` (see src/agora/parse.js).
+   */
+  planning: {
+    method: 'GET',
+    path: 'InternalApi/API_CALENDAR_COMPONENT/events/',
+    query: { context: 'idContext', targets: 'targets', from: 'startDate', to: 'endDate' },
+    context: '1',
+  },
   /** The invoices, paid and to pay. Not captured yet. */
   invoices: { method: 'GET', path: null },
   /** The messages and notifications of the municipality. Not captured yet. */

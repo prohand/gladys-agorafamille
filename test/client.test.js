@@ -95,11 +95,19 @@ test('nothing is asked of the portal without credentials', async () => {
   assert.equal(portal.requests.length, 0);
 });
 
-test('the planning window is sent the way the portal writes days', async () => {
+test('the planning is asked the way the portal pages ask it', async () => {
   const portal = createFakePortal();
   await clientFor(portal).getPlanning('2026-11-04', '2026-11-18');
   const request = portal.requests.find((r) => r.path === ENDPOINTS.planning.path);
-  assert.deepEqual(request.query, { p_date_debut: '04/11/2026', p_date_fin: '18/11/2026' });
+  assert.equal(request.path, 'InternalApi/API_CALENDAR_COMPONENT/events/');
+  // The children come from the login answer here: no children list given.
+  assert.deepEqual(request.query, {
+    idContext: '1',
+    targets: '101$0,102$0',
+    startDate: '04/11/2026',
+    endDate: '18/11/2026',
+  });
+  assert.match(request.url, /targets=101\$0,102\$0&startDate=04\/11\/2026&/);
   assert.equal(frenchDate('2026-01-09'), '09/01/2026');
 });
 

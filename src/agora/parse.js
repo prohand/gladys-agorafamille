@@ -86,8 +86,30 @@ const FIELDS = {
     'activite.id',
   ],
   status: ['etat', 'statut', 'status', 'state', 'libelleEtat', 'codeEtat', 'etat.libelle'],
-  invoiceId: ['idFacture', 'id_facture', 'numFacture', 'numeroFacture', 'numero', 'number', 'id'],
-  invoiceLabel: ['libelle', 'label', 'objet', 'periode', 'designation', 'regie'],
+  // The API (October 2026): `{ DATA: { count, data: [{ idInvoice, FACT_DESC,
+  // total, TOTAL_PAID, limitDatePayment, START_DATE, STATUS: "Payée" }] } }`.
+  invoiceId: [
+    'idInvoice',
+    'idFacture',
+    'id_facture',
+    'numFacture',
+    'numeroFacture',
+    'numero',
+    'number',
+    'id',
+  ],
+  invoiceLabel: [
+    'FACT_DESC',
+    'DESC_CODE_LABEL',
+    'libelle',
+    'label',
+    'objet',
+    'FACTURATION_PERIOD',
+    'periode',
+    'designation',
+    'regie',
+  ],
+  paidAmount: ['TOTAL_PAID', 'montantPaye', 'montant_paye', 'amountPaid'],
   amount: ['montantTTC', 'montant', 'amount', 'total', 'montantTotal', 'montant_total'],
   remaining: [
     'resteAPayer',
@@ -98,8 +120,24 @@ const FIELDS = {
     'remaining',
     'solde',
   ],
-  issuedOn: ['dateEmission', 'date_emission', 'dateFacture', 'date_facture', 'issuedOn', 'date'],
-  dueOn: ['dateEcheance', 'date_echeance', 'echeance', 'dateLimite', 'dueDate', 'dueOn'],
+  issuedOn: [
+    'dateEmission',
+    'date_emission',
+    'dateFacture',
+    'date_facture',
+    'issuedOn',
+    'date',
+    'START_DATE',
+  ],
+  dueOn: [
+    'limitDatePayment',
+    'dateEcheance',
+    'date_echeance',
+    'echeance',
+    'dateLimite',
+    'dueDate',
+    'dueOn',
+  ],
   paid: ['payee', 'estPayee', 'paid', 'isPaid', 'reglee', 'soldee'],
   invoiceStatus: ['etat', 'statut', 'status', 'state'],
   messageId: ['idMessage', 'id_message', 'idNotification', 'id'],
@@ -293,12 +331,16 @@ export function parseInvoices(payload) {
   for (const entry of listOf(payload, INVOICE_LIST_KEYS)) {
     const id = text(first(entry, FIELDS.invoiceId));
     const amount = parseAmount(first(entry, FIELDS.amount));
-    if (!id || amount === null || seen.has(id)) {
+    // `deleted: 1`: an invoice cancelled by the municipality.
+    if (!id || amount === null || seen.has(id) || toBoolean(get(entry, 'deleted') ?? false)) {
       continue;
     }
     seen.add(id);
     const paid = parsePaid(entry);
-    const remainingValue = parseAmount(first(entry, FIELDS.remaining));
+    const paidAmount = parseAmount(first(entry, FIELDS.paidAmount));
+    const remainingValue =
+      parseAmount(first(entry, FIELDS.remaining)) ??
+      (paidAmount === null ? null : Math.round((amount - paidAmount) * 100) / 100);
     const remaining = remainingValue ?? (paid ? 0 : amount);
     invoices.push({
       id,
@@ -307,7 +349,8 @@ export function parseInvoices(payload) {
       remaining: Math.max(0, remaining),
       issuedOn: parseDay(first(entry, FIELDS.issuedOn)),
       dueOn: parseDay(first(entry, FIELDS.dueOn)),
-      paid: paid || remaining <= 0,
+      // An amount left to pay says more than a label ("Partiellement payée").
+      paid: remainingValue === null ? paid || remaining <= 0 : remainingValue <= 0,
     });
   }
   return invoices.sort((a, b) => (b.issuedOn ?? '').localeCompare(a.issuedOn ?? ''));
@@ -319,7 +362,7 @@ function parsePaid(entry) {
     return toBoolean(flag);
   }
   const status = normalize(first(entry, FIELDS.invoiceStatus) ?? '');
-  if (/impay|non pay|a payer|unpaid|attente|due/.test(status)) {
+  if (/impay|non pay|a payer|partiel|unpaid|attente|due/.test(status)) {
     return false;
   }
   return /pay|regl|sold|paid|acquit/.test(status);

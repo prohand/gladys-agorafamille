@@ -67,7 +67,8 @@ export function createAgoraService({ config, store, fetch, now = () => new Date(
       children = childrenOfPlanning(planning);
     }
     // Invoices and messages are modules a municipality may not have bought:
-    // a portal without them answers 404, which is "nothing", not a failure.
+    // a portal without them answers 404, which is "nothing", not a failure;
+    // the same holds while their request is not captured yet.
     const modules = {};
     const invoices = await optional(() => client.getInvoices(), 'invoices', modules);
     const messages = await optional(() => client.getMessages(), 'messages', modules);
@@ -207,7 +208,10 @@ async function optional(read, module, modules) {
   try {
     return await read();
   } catch (err) {
-    if (err instanceof AgoraError && err.code === ERROR_CODES.HTTP && err.status === 404) {
+    // Not bought (404), or the request is not captured yet: no data, not a failure.
+    const missing =
+      err instanceof AgoraError && err.code === ERROR_CODES.HTTP && err.status === 404;
+    if (missing || (err instanceof AgoraError && err.code === ERROR_CODES.UNMAPPED)) {
       modules[module] = false;
       return [];
     }

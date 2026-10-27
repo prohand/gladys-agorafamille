@@ -70,6 +70,7 @@ export class AgoraClient {
     this.cookies = new Map();
     this.sessionId = null;
     this.refYear = null;
+    this.targets = [];
     this.signedIn = false;
   }
 
@@ -119,6 +120,9 @@ export class AgoraClient {
       response.headers.get('session-id') ??
       findValue(answer, /^(session_?id|sessionid|id_?session|token|access_?token)$/i);
     this.refYear = findValue(answer, /^(ref_?year|annee_?ref(erence)?|current_?year)$/i);
+    // The children of the account, as the planning names them (`4412$0`),
+    // when the login answer carries them.
+    this.targets = collectTargets(answer);
     if (!this.sessionId && this.cookies.size === 0) {
       throw new AgoraError(
         ERROR_CODES.FORMAT,
@@ -127,7 +131,10 @@ export class AgoraClient {
       );
     }
     this.signedIn = true;
-    logger.info(`Signed in to the portal (answer fields: ${fieldNames || 'none'})`);
+    logger.info(
+      `Signed in to the portal (answer fields: ${fieldNames || 'none'}; ` +
+        `${this.targets.length} child target(s) found)`,
+    );
   }
 
   async getChildren() {
@@ -140,9 +147,27 @@ export class AgoraClient {
    * @param {Array<object>} [children] see parsePlanning
    */
   async getPlanning(from, to, children = []) {
-    const { query } = ENDPOINTS.planning;
+    if (!this.signedIn) {
+      await this.login();
+    }
+    // The planning is asked for the children it lists, `<person id>$0`.
+    const targets =
+      children.length > 0 ? children.map((child) => child.target ?? `${child.id}$0`) : this.targets;
+    if (targets.length === 0) {
+      throw new AgoraError(
+        ERROR_CODES.UNMAPPED,
+        'Signed in, but the children to ask the planning for are not known yet',
+        { step: 'children' },
+      );
+    }
+    const { query, context } = ENDPOINTS.planning;
     const payload = await this.call(ENDPOINTS.planning, {
-      query: { [query.from]: frenchDate(from), [query.to]: frenchDate(to) },
+      query: {
+        [query.context]: context,
+        [query.targets]: targets.join(','),
+        [query.from]: frenchDate(from),
+        [query.to]: frenchDate(to),
+      },
       step: 'planning',
     });
     return parsePlanning(payload, children);
@@ -250,10 +275,12 @@ export class AgoraClient {
   }
 
   async send(endpoint, { query, body, contentType, step }) {
-    const url = new URL(`${this.base}/${endpoint.path}`);
-    for (const [name, value] of Object.entries(query ?? {})) {
-      url.searchParams.set(name, value);
-    }
+    // The query is written the way the portal pages write it: `$`, `,` and
+    // `/` as they are (`targets=4412$0,9268$0&startDate=26/10/2026`).
+    const search = Object.entries(query ?? {})
+      .map(([name, value]) => `${encodeQuery(name)}=${encodeQuery(value)}`)
+      .join('&');
+    const url = `${this.base}/${endpoint.path}${search ? `?${search}` : ''}`;
     // The headers the portal pages send: `null` (as text) before the login.
     const headers = {
       accept: 'application/json, text/plain, */*',
@@ -433,6 +460,28 @@ function keyPaths(node, prefix = '', depth = 0, paths = []) {
     }
   }
   return paths;
+}
+
+function encodeQuery(value) {
+  return encodeURIComponent(String(value))
+    .replace(/%24/g, '$')
+    .replace(/%2C/g, ',')
+    .replace(/%2F/g, '/');
+}
+
+/** Every `<id>$<n>` value of an answer, once each: the targets of the planning. */
+function collectTargets(node, found = new Set(), depth = 0) {
+  if (depth > 5 || node === null || node === undefined) {
+    return [...found];
+  }
+  if (typeof node === 'string' && /^\d+\$\d+$/.test(node.trim())) {
+    found.add(node.trim());
+  } else if (typeof node === 'object') {
+    for (const value of Object.values(node)) {
+      collectTargets(value, found, depth + 1);
+    }
+  }
+  return [...found];
 }
 
 /** `2026-11-05` → `05/11/2026`, the way the portal's forms write a day. */

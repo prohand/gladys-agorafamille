@@ -299,18 +299,18 @@ test('the password never reaches the logs', async (t) => {
   assert.ok(!lines.some((line) => /\bs1\b/.test(line)));
 });
 
-test('with the data requests not captured yet, the sign-in is still checked', async (t) => {
+test('with only the sign-in and the planning known, the integration works', async (t) => {
   restorePaths();
   t.after(() => {
     restorePaths = useTestPaths();
   });
   const { gladys, app } = await start();
   t.after(() => app.stop());
+  assert.equal(gladys.fake.connectionStatus.connected, true);
   const ack = await gladys.fake.action('test_connection', {});
   const message = ack.data.message ?? ack.data;
-  assert.match(message.fr, /Connexion au portail réussie/);
-  assert.match(message.fr, /planning/);
-  assert.equal(gladys.fake.connectionStatus.connected, false);
+  assert.match(message.fr, /Enfants : Enfant 101, Enfant 102/);
+  assert.match(message.fr, /Factures : pas encore lues/);
 });
 
 test('without the children request, the children come from the planning', async (t) => {
