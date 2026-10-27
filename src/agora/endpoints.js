@@ -31,10 +31,21 @@ export const ENDPOINTS = {
   login: {
     method: 'POST',
     path: 'InternalApi/API_DASHBOARD/authentication',
+    // PASSWORD is the password as `encryptPassword` (below) gave it back,
+    // never as typed: sent as typed, the API answers "Exception detected".
     fields: { username: 'LOGIN', password: 'PASSWORD' },
-    // The portal pages never send the password as typed: they encode it in
-    // Base64 first (`btoa(password)`, seen in the portal's code, October
-    // 2026). Sent as typed, the API answered "Exception detected".
+  },
+  /**
+   * First step of the sign-in, seen in the portal's code (October 2026):
+   * the page sends `{ PASSWORD: btoa(password) }` to
+   * `HomeLoginService.encryptPassword`, and the API answers the encrypted
+   * password in `DATA` (`TYPE_RESULT: 1`), which `login` then sends.
+   * The address of that request is not captured yet.
+   */
+  encryptPassword: {
+    method: 'POST',
+    path: null,
+    field: 'PASSWORD',
     passwordEncoding: 'base64',
   },
   /** The children of the family. Not captured yet. */

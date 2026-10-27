@@ -10,6 +10,12 @@ before(() => {
 });
 after(() => restorePaths());
 
+/** A fetch answering `answer()` to everything but the password encryption. */
+function passEncryption(portal, answer) {
+  return async (url, options) =>
+    String(url).endsWith(ENDPOINTS.encryptPassword.path) ? portal.fetch(url, options) : answer();
+}
+
 function clientFor(portal, overrides = {}) {
   return new AgoraClient({
     apiBase: BASE,
@@ -34,14 +40,15 @@ test('signs in once, the way the portal pages do, then sends the session id', as
   );
   const logins = portal.requests.filter((request) => request.path === ENDPOINTS.login.path);
   assert.equal(logins.length, 1);
-  const [login] = portal.requests;
+  const [encrypt, login] = portal.requests;
+  assert.equal(encrypt.method, 'POST');
+  assert.equal(encrypt.path, ENDPOINTS.encryptPassword.path);
+  // `btoa('s3cret')`, as the portal pages send it.
+  assert.deepEqual(JSON.parse(encrypt.body), { PASSWORD: 'czNjcmV0' });
   assert.equal(login.method, 'POST');
   assert.equal(login.path, 'InternalApi/API_DASHBOARD/authentication');
-  assert.deepEqual(JSON.parse(login.body), {
-    LOGIN: portal.username,
-    // `btoa('s3cret')`, as the portal pages send it.
-    PASSWORD: 'czNjcmV0',
-  });
+  // The password as the API encrypted it, never as typed.
+  assert.deepEqual(JSON.parse(login.body), { LOGIN: portal.username, PASSWORD: 'enc(s3cret)' });
   assert.equal(login.headers['content-type'], 'application/json');
   assert.equal(login.headers.session_id, 'null');
   assert.equal(login.headers.ref_year, 'null');
@@ -98,7 +105,8 @@ test('wrong credentials are an auth error, without retrying forever', async () =
     assert.ok(!err.message.includes('wrong'));
     return true;
   });
-  assert.equal(portal.requests.length, 1);
+  // The encryption, then the refused login: no retry.
+  assert.equal(portal.requests.length, 2);
 });
 
 test('a portal that does not answer is a network error', async () => {
@@ -160,11 +168,14 @@ test('a request the portal declines is reported as refused', async () => {
 test('a refused login logs what the portal answered, secrets masked', async (t) => {
   const portal = createFakePortal();
   const client = clientFor(portal);
-  client.fetch = async () =>
-    new Response(
-      `<html><body><h1>Bad Request</h1><p>p_login=${portal.username} p_password=${portal.password}</p></body></html>`,
-      { status: 400, headers: { 'content-type': 'text/html' } },
-    );
+  client.fetch = passEncryption(
+    portal,
+    () =>
+      new Response(
+        `<html><body><h1>Bad Request</h1><p>p_login=${portal.username} p_password=${portal.password}</p></body></html>`,
+        { status: 400, headers: { 'content-type': 'text/html' } },
+      ),
+  );
   const lines = [];
   t.mock.method(console, 'error', (...args) => lines.push(args.join(' ')));
   // Whatever level the test run was started with, warnings are shown.
@@ -197,16 +208,19 @@ test('a request not captured yet is said as such, after a successful sign-in', a
   });
   await assert.rejects(client.getChildren(), { code: ERROR_CODES.UNMAPPED, step: 'children' });
   assert.equal(client.signedIn, true);
-  assert.equal(portal.requests.length, 1);
+  assert.equal(portal.requests.length, 2);
 });
 
 test('a login answer without a session names its fields, not their values', async () => {
   const portal = createFakePortal();
   const client = clientFor(portal);
-  client.fetch = async () =>
-    new Response(JSON.stringify({ RESULT: { NOM: 'Martin', CODE: 'secret-value' } }), {
-      headers: { 'content-type': 'application/json' },
-    });
+  client.fetch = passEncryption(
+    portal,
+    () =>
+      new Response(JSON.stringify({ RESULT: { NOM: 'Martin', CODE: 'secret-value' } }), {
+        headers: { 'content-type': 'application/json' },
+      }),
+  );
   await assert.rejects(client.getChildren(), (err) => {
     assert.equal(err.code, ERROR_CODES.FORMAT);
     assert.match(err.message, /fields: RESULT\.NOM, RESULT\.CODE/);
@@ -241,15 +255,18 @@ test('the requests carry a French language and name the integration', async () =
 test('an exception of the portal is not called a wrong password', async () => {
   const portal = createFakePortal();
   const client = clientFor(portal);
-  client.fetch = async () =>
-    new Response(
-      JSON.stringify({
-        DATA: null,
-        ERROR: { ID: '1', MESSAGE: 'Exception detected' },
-        TYPE_RESULT: -2,
-      }),
-      { headers: { 'content-type': 'application/json' } },
-    );
+  client.fetch = passEncryption(
+    portal,
+    () =>
+      new Response(
+        JSON.stringify({
+          DATA: null,
+          ERROR: { ID: '1', MESSAGE: 'Exception detected' },
+          TYPE_RESULT: -2,
+        }),
+        { headers: { 'content-type': 'application/json' } },
+      ),
+  );
   await assert.rejects(client.getChildren(), {
     code: ERROR_CODES.FORMAT,
     step: 'login',
@@ -262,4 +279,26 @@ test("the password is encoded like the browser's btoa, accents included", () => 
   // btoa('Été2026!') in a browser.
   assert.equal(encodePassword('Été2026!', 'base64'), 'yXTpMjAyNiE=');
   assert.equal(encodePassword('s3cret', undefined), 's3cret');
+});
+
+test('without the encryption request, the sign-in says which request is missing', async (t) => {
+  const portal = createFakePortal();
+  const path = ENDPOINTS.encryptPassword.path;
+  ENDPOINTS.encryptPassword.path = null;
+  t.after(() => {
+    ENDPOINTS.encryptPassword.path = path;
+  });
+  await assert.rejects(clientFor(portal).getChildren(), {
+    code: ERROR_CODES.UNMAPPED,
+    step: 'encrypt',
+  });
+  assert.equal(portal.requests.length, 0);
+});
+
+test('a staff account (USER_TYPE_ID 1) is turned away like the portal does', async () => {
+  const portal = createFakePortal({ userType: 1 });
+  await assert.rejects(clientFor(portal).getChildren(), {
+    code: ERROR_CODES.AUTH,
+    message: 'This account is not a family account',
+  });
 });

@@ -86,13 +86,19 @@ export function createFakePortal(data = {}) {
     };
     portal.requests.push(request);
 
+    // Step 1 of the sign-in: the password, Base64-encoded (`btoa`), comes
+    // back encrypted. The fake "encryption" is reversible on purpose.
+    if (path === ENDPOINTS.encryptPassword.path) {
+      const body = JSON.parse(options.body);
+      const typed = Buffer.from(body[ENDPOINTS.encryptPassword.field], 'base64').toString('latin1');
+      return json({ DATA: `enc(${typed})`, ERROR: null, TYPE_RESULT: 1 });
+    }
+
     if (path === ENDPOINTS.login.path) {
       const body = JSON.parse(options.body);
       if (
         body[ENDPOINTS.login.fields.username] !== portal.username ||
-        // The real API takes the password Base64-encoded (`btoa`).
-        body[ENDPOINTS.login.fields.password] !==
-          Buffer.from(portal.password, 'latin1').toString('base64')
+        body[ENDPOINTS.login.fields.password] !== `enc(${portal.password})`
       ) {
         // As the real API refuses (October 2026).
         return json({
@@ -106,11 +112,20 @@ export function createFakePortal(data = {}) {
       portal.sessions.add(id);
       // Where the real answer lists the children is not known yet: the
       // client looks for `<id>$<n>` values anywhere in it.
+      // `DATA.session.USER_INFO.USER_TYPE_ID` is what the portal pages read;
+      // the other names are not known yet.
       return json({
-        SUCCESS: true,
-        SESSION_ID: id,
-        REF_YEAR: 2026,
-        USER: { NAME: 'Martin', TARGETS: portal.children.map((child) => `${child.idEnfant}$0`) },
+        DATA: {
+          session: {
+            SESSION_ID: id,
+            REF_YEAR: 2026,
+            USER_INFO: { USER_TYPE_ID: portal.userType ?? 2, NAME: 'Martin' },
+            TARGETS: portal.children.map((child) => `${child.idEnfant}$0`),
+          },
+          CGU_ACCEPTED: 1,
+        },
+        ERROR: null,
+        TYPE_RESULT: 1,
       });
     }
 

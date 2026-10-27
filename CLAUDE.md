@@ -56,8 +56,10 @@ src/i18n.js, messages.js  { en, fr, de, es } texts
   than guess (a wrong guess books the wrong lunch). Add a spelling there, not a special case
   elsewhere.
 - **The API is `https://<commune>.agoraplus.fr/InternalApi/…`**, not the portal pages host
-  (`portalssl.agoraplus.fr/<commune>`): `config.apiBase` vs `config.portalBase`. Sign-in is
-  `POST InternalApi/API_DASHBOARD/authentication` with JSON `{LOGIN, PASSWORD}` and headers
+  (`portalssl.agoraplus.fr/<commune>`): `config.apiBase` vs `config.portalBase`. Sign-in is two
+  requests: `encryptPassword` (`{PASSWORD: btoa(password)}` → the encrypted password in `DATA`,
+  address not captured yet), then `POST InternalApi/API_DASHBOARD/authentication` with JSON
+  `{LOGIN, PASSWORD: <encrypted>}` and headers
   `session_id: null`, `ref_year: null`, `a_access: agora` (captured from a real browser); the
   session id answered goes back in `session_id`. A 401/403 (or a login page / redirect on older
   portals) means "session expired": `client.js` signs in again once.

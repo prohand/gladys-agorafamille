@@ -12,6 +12,12 @@ import { localize, pick } from './i18n.js';
 
 const STEPS = {
   login: { en: 'sign-in', fr: 'connexion', de: 'Anmeldung', es: 'inicio de sesión' },
+  encrypt: {
+    en: 'password encryption',
+    fr: 'chiffrement du mot de passe',
+    de: 'Passwortverschlüsselung',
+    es: 'cifrado de la contraseña',
+  },
   children: { en: 'children', fr: 'enfants', de: 'Kinder', es: 'hijos' },
   planning: { en: 'planning', fr: 'planning', de: 'Planung', es: 'planificación' },
   invoices: { en: 'invoices', fr: 'factures', de: 'Rechnungen', es: 'facturas' },
@@ -63,6 +69,16 @@ export function describeError(error) {
           }) + `${where(language)}.`,
       );
     case ERROR_CODES.UNMAPPED:
+      if (error.step === 'encrypt') {
+        return localize((language) =>
+          pick(language, {
+            en: 'A request of the portal is not known yet: password encryption. See the documentation.',
+            fr: 'Une requête du portail n’est pas encore connue : chiffrement du mot de passe. Voir la documentation.',
+            de: 'Eine Anfrage des Portals ist noch nicht bekannt: Passwortverschlüsselung. Siehe die Dokumentation.',
+            es: 'Una petición del portal aún no se conoce: cifrado de la contraseña. Vea la documentación.',
+          }),
+        );
+      }
       return localize(
         (language) =>
           pick(language, {

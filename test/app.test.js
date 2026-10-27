@@ -302,10 +302,11 @@ test('the password never reaches the logs', async (t) => {
   assert.ok(!lines.some((line) => /\bs1\b/.test(line)));
 });
 
-test('with only the requests captured so far, the integration works', async (t) => {
-  restorePaths();
+test('without the children request, the integration still works', async (t) => {
+  const path = ENDPOINTS.children.path;
+  ENDPOINTS.children.path = null;
   t.after(() => {
-    restorePaths = useTestPaths();
+    ENDPOINTS.children.path = path;
   });
   const { gladys, app } = await start();
   t.after(() => app.stop());
@@ -315,6 +316,20 @@ test('with only the requests captured so far, the integration works', async (t) 
   assert.match(message.fr, /Enfants : Enfant 101, Enfant 102/);
   assert.match(message.fr, /1 facture\(s\) à payer/);
   assert.match(message.fr, /1 message\(s\) non lu\(s\)/);
+});
+
+test('without the encryption request, the Configuration screen names it', async (t) => {
+  const path = ENDPOINTS.encryptPassword.path;
+  ENDPOINTS.encryptPassword.path = null;
+  t.after(() => {
+    ENDPOINTS.encryptPassword.path = path;
+  });
+  const { gladys, app } = await start();
+  t.after(() => app.stop());
+  assert.equal(gladys.fake.connectionStatus.connected, false);
+  const ack = await gladys.fake.action('test_connection', {});
+  const message = ack.data.message ?? ack.data;
+  assert.match(message.fr, /chiffrement du mot de passe/);
 });
 
 test('without the children request, the children come from the planning', async (t) => {

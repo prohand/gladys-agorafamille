@@ -94,12 +94,12 @@ export class AgoraClient {
     this.sessionId = null;
     this.refYear = null;
     this.signedIn = false;
+    const encrypted = await this.encryptPassword();
+    // It signs in as well as the password: masked in the logs like it.
+    this.encryptedPassword = encrypted;
     const { fields } = ENDPOINTS.login;
     const response = await this.send(ENDPOINTS.login, {
-      body: JSON.stringify({
-        [fields.username]: this.username,
-        [fields.password]: encodePassword(this.password, ENDPOINTS.login.passwordEncoding),
-      }),
+      body: JSON.stringify({ [fields.username]: this.username, [fields.password]: encrypted }),
       contentType: 'application/json',
       step: 'login',
     });
@@ -152,6 +152,15 @@ export class AgoraClient {
       response.headers.get('session-id') ??
       findValue(answer, /^(session_?id|sessionid|id_?session|token|access_?token)$/i);
     this.refYear = findValue(answer, /^(ref_?year|annee_?ref(erence)?|current_?year)$/i);
+    // The portal pages turn away a user of type 1 (an account of the
+    // municipality's staff, not a family) right after a successful login.
+    const userType = findValue(answer, /^user_?type_?id$/i);
+    if (userType === '1') {
+      throw new AgoraError(ERROR_CODES.AUTH, 'This account is not a family account', {
+        step: 'login',
+        portalMessage: 'USER_TYPE_ID 1',
+      });
+    }
     // The children of the account, as the planning names them (`1001$0`),
     // when the login answer carries them.
     this.targets = collectTargets(answer);
@@ -167,6 +176,56 @@ export class AgoraClient {
       `Signed in to the portal (answer fields: ${fieldNames || 'none'}; ` +
         `${this.targets.length} child target(s) found)`,
     );
+  }
+
+  /**
+   * The password the way the sign-in takes it: Base64-encoded, then
+   * encrypted by the API itself (the portal pages do the same, see
+   * endpoints.js). Never logged: it signs in as well as the password.
+   */
+  async encryptPassword() {
+    const endpoint = ENDPOINTS.encryptPassword;
+    if (!endpoint.path) {
+      throw new AgoraError(
+        ERROR_CODES.UNMAPPED,
+        'The portal request encrypting the password is not known yet (src/agora/endpoints.js)',
+        { step: 'encrypt' },
+      );
+    }
+    const response = await this.send(endpoint, {
+      body: JSON.stringify({
+        [endpoint.field]: encodePassword(this.password, endpoint.passwordEncoding),
+      }),
+      contentType: 'application/json',
+      step: 'encrypt',
+    });
+    if (response.status >= 400) {
+      await this.logAnswer(endpoint, response);
+      throw new AgoraError(
+        ERROR_CODES.HTTP,
+        `Encrypting the password answered HTTP ${response.status}`,
+        {
+          status: response.status,
+          step: 'encrypt',
+        },
+      );
+    }
+    const answer = await readJson(response).catch(() => null);
+    const encrypted = field(answer, 'data');
+    if (!answer || isFailure(answer) || typeof encrypted !== 'string' || !encrypted) {
+      const portalMessage = answer ? this.mask(failureMessage(answer) ?? '') || null : null;
+      logger.warn(
+        `Encrypting the password failed (HTTP ${response.status}): ` +
+          `${answer ? this.mask(describeStatus(answer)) : 'not JSON'}; ` +
+          `answer fields: ${answer ? keyPaths(answer).join(', ') || 'none' : 'none'}`,
+      );
+      throw new AgoraError(ERROR_CODES.FORMAT, 'The portal did not encrypt the password', {
+        status: response.status,
+        step: 'encrypt',
+        portalMessage,
+      });
+    }
+    return encrypted;
   }
 
   async getChildren() {
@@ -403,7 +462,7 @@ export class AgoraClient {
   /** A text with the login and the password replaced by `***`. */
   mask(text) {
     let masked = String(text);
-    for (const secret of [this.password, this.username]) {
+    for (const secret of [this.encryptedPassword, this.password, this.username]) {
       if (secret) {
         masked = masked.split(secret).join('***');
       }
