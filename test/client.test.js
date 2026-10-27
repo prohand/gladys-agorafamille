@@ -44,7 +44,8 @@ test('signs in once, the way the portal pages do, then sends the session id', as
   assert.equal(encrypt.method, 'POST');
   assert.equal(encrypt.path, ENDPOINTS.encryptPassword.path);
   // `btoa('s3cret')`, as the portal pages send it.
-  assert.deepEqual(JSON.parse(encrypt.body), { PASSWORD: 'czNjcmV0' });
+  assert.equal(encrypt.path, 'InternalApi/API_DASHBOARD/encryptText');
+  assert.deepEqual(JSON.parse(encrypt.body), { text: 'czNjcmV0' });
   assert.equal(login.method, 'POST');
   assert.equal(login.path, 'InternalApi/API_DASHBOARD/authentication');
   // The password as the API encrypted it, never as typed.

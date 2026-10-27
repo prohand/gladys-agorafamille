@@ -298,7 +298,7 @@ test('the password never reaches the logs', async (t) => {
   assert.ok(lines.some((line) => line.includes(ENDPOINTS.login.path)));
   assert.ok(!lines.some((line) => line.includes(CONFIG.password)));
   // The session id (s1) is never printed, only the names of the fields.
-  assert.ok(lines.some((line) => /Signed in .*SESSION_ID/.test(line)));
+  assert.ok(lines.some((line) => /Signed in .*session_id/.test(line)));
   assert.ok(!lines.some((line) => /\bs1\b/.test(line)));
 });
 

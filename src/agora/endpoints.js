@@ -28,6 +28,9 @@ export const ENDPOINTS = {
    * POST /InternalApi/API_DASHBOARD/authentication, JSON {"LOGIN", "PASSWORD"},
    * headers `session_id: null`, `ref_year: null`, `a_access: agora`.
    */
+  // The answer carries the session in `DATA.session`: `session_id` goes
+  // back in the `session_id` header, `school_year` in `ref_year`
+  // (`setSessionDataAndRedirect` of the portal's code).
   login: {
     method: 'POST',
     path: 'InternalApi/API_DASHBOARD/authentication',
@@ -36,16 +39,16 @@ export const ENDPOINTS = {
     fields: { username: 'LOGIN', password: 'PASSWORD' },
   },
   /**
-   * First step of the sign-in, seen in the portal's code (October 2026):
-   * the page sends `{ PASSWORD: btoa(password) }` to
-   * `HomeLoginService.encryptPassword`, and the API answers the encrypted
-   * password in `DATA` (`TYPE_RESULT: 1`), which `login` then sends.
-   * The address of that request is not captured yet.
+   * First step of the sign-in, read in the portal's code (October 2026,
+   * `pck_home.home_login_service`): `HomeLoginService.encryptPassword` posts
+   * `{ text: btoa(password) }` to API_DASHBOARD/encryptText, and the API
+   * answers the encrypted password in `DATA` (`TYPE_RESULT: 1`), which
+   * `login` then sends.
    */
   encryptPassword: {
     method: 'POST',
-    path: null,
-    field: 'PASSWORD',
+    path: 'InternalApi/API_DASHBOARD/encryptText',
+    field: 'text',
     passwordEncoding: 'base64',
   },
   /** The children of the family. Not captured yet. */

@@ -151,7 +151,10 @@ export class AgoraClient {
       response.headers.get('session_id') ??
       response.headers.get('session-id') ??
       findValue(answer, /^(session_?id|sessionid|id_?session|token|access_?token)$/i);
-    this.refYear = findValue(answer, /^(ref_?year|annee_?ref(erence)?|current_?year)$/i);
+    this.refYear = findValue(
+      answer,
+      /^(school_?year|ref_?year|annee_?ref(erence)?|current_?year)$/i,
+    );
     // The portal pages turn away a user of type 1 (an account of the
     // municipality's staff, not a family) right after a successful login.
     const userType = findValue(answer, /^user_?type_?id$/i);

@@ -35,7 +35,8 @@ Release.
 - "Test the connection" action naming the step that fails, with the portal's own message.
 - The sign-in follows the portal pages: the password, Base64-encoded, is first encrypted by the
   portal, and that is what the sign-in sends (sent as typed, the portal answered "Exception
-  detected"). The address of the encryption request is not captured yet. A staff account
+  detected"): `API_DASHBOARD/encryptText`, then `authentication`, as read in the portal's code;
+  the session id and school year come from `DATA.session`. A staff account
   (`USER_TYPE_ID` 1) is turned away, as the portal does.
 - Requests are sent with a French `Accept-Language` and a `User-Agent` naming the integration.
 - A request the portal refuses logs its address, its HTTP status and the start of the answer

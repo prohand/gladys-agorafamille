@@ -116,9 +116,10 @@ export function createFakePortal(data = {}) {
       // the other names are not known yet.
       return json({
         DATA: {
+          // As in the portal's code: `session.session_id`, `session.school_year`.
           session: {
-            SESSION_ID: id,
-            REF_YEAR: 2026,
+            session_id: id,
+            school_year: 2026,
             USER_INFO: { USER_TYPE_ID: portal.userType ?? 2, NAME: 'Martin' },
             TARGETS: portal.children.map((child) => `${child.idEnfant}$0`),
           },
