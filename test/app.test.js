@@ -1,4 +1,4 @@
-import { test } from 'node:test';
+import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createFakeGladys } from '@gladysassistant/integration-sdk/testing';
 import { validateWidgetContent } from '@gladysassistant/integration-sdk';
@@ -8,7 +8,13 @@ import { ENDPOINTS } from '../src/agora/endpoints.js';
 import { CHILD_FEATURES, ACCOUNT_FEATURES, accountIds, childIds } from '../src/devices/index.js';
 import { FAMILY_WIDGET, WIDGET_ACTIONS } from '../src/capabilities/widget.js';
 import { SCENE_ACTIONS, SCENE_TRIGGERS } from '../src/capabilities/scenes.js';
-import { CONFIG, createFakePortal, createMemoryStore } from './helpers/fakePortal.js';
+import { CONFIG, createFakePortal, createMemoryStore, useTestPaths } from './helpers/fakePortal.js';
+
+let restorePaths;
+before(() => {
+  restorePaths = useTestPaths();
+});
+after(() => restorePaths());
 
 // Wednesday 4 November 2026, 10:00 in Paris.
 const NOW = new Date('2026-11-04T09:00:00Z');
@@ -288,5 +294,21 @@ test('the password never reaches the logs', async (t) => {
   }
   assert.ok(lines.some((line) => line.includes(ENDPOINTS.login.path)));
   assert.ok(!lines.some((line) => line.includes(CONFIG.password)));
-  assert.ok(!lines.some((line) => line.includes('AGORA_SESSION')));
+  // The session id (s1) is never printed, only the names of the fields.
+  assert.ok(lines.some((line) => /Signed in .*SESSION_ID/.test(line)));
+  assert.ok(!lines.some((line) => /\bs1\b/.test(line)));
+});
+
+test('with the data requests not captured yet, the sign-in is still checked', async (t) => {
+  restorePaths();
+  t.after(() => {
+    restorePaths = useTestPaths();
+  });
+  const { gladys, app } = await start();
+  t.after(() => app.stop());
+  const ack = await gladys.fake.action('test_connection', {});
+  const message = ack.data.message ?? ack.data;
+  assert.match(message.fr, /Connexion au portail réussie/);
+  assert.match(message.fr, /enfants/);
+  assert.equal(gladys.fake.connectionStatus.connected, false);
 });

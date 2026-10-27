@@ -28,7 +28,8 @@ export const MIN_REFRESH_INTERVAL_MS = 60_000;
 export function createAgoraService({ config, store, fetch, now = () => new Date() }) {
   const client = config.configured
     ? new AgoraClient({
-        base: config.portalBase,
+        apiBase: config.apiBase,
+        origin: new URL(config.portalBase).origin,
         username: config.username,
         password: config.password,
         fetch,

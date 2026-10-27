@@ -33,6 +33,9 @@ export const MAX_DUE_REMINDER_DAYS = 15;
 /** Where every Agora Famille portal lives, one path per municipality. */
 export const AGORA_HOST = 'https://portalssl.agoraplus.fr';
 
+/** The domain of the API, one sub-domain per municipality: `<commune>.agoraplus.fr`. */
+export const AGORA_DOMAIN = 'agoraplus.fr';
+
 /**
  * Merge the user config with the defaults and resolve the portal address.
  *
@@ -63,8 +66,9 @@ export function normalizeConfig(raw = {}) {
   const portal = parsePortalUrl(raw.portal_url);
   config.portal_url = portal?.url ?? '';
   config.portalBase = portal?.base ?? null;
+  config.apiBase = portal?.apiBase ?? null;
   config.commune = portal?.commune ?? null;
-  config.configured = Boolean(config.portalBase && config.username && config.password);
+  config.configured = Boolean(config.apiBase && config.username && config.password);
   // The account the devices hang on: the commune and the login, hashed so the
   // e-mail address never ends up in a Gladys external id.
   config.accountId = config.configured
@@ -79,14 +83,16 @@ export function normalizeConfig(raw = {}) {
  * Accepted, all of them seen in municipal guides and browser bars:
  *   lognes
  *   portalssl.agoraplus.fr/lognes
- *   https://portalssl.agoraplus.fr/lognes/
  *   https://portalssl.agoraplus.fr/lognes/pck_home.home_view#/
+ *   https://lognes.agoraplus.fr  (the address of the API itself)
  *   https://famille.ma-ville.fr/agora  (a municipality behind its own name)
  *
- * The page part (`pck_…`, `#/…`, a query) is dropped: the integration only
- * needs the base the portal pages hang on.
+ * Two addresses come out of it. The pages a person opens live under
+ * `portalssl.agoraplus.fr/<commune>`; the pages fetch their data from the API
+ * of the municipality, `https://<commune>.agoraplus.fr/InternalApi/…` — that
+ * one is what the integration talks to.
  *
- * @returns {{url: string, base: string, commune: string}|null}
+ * @returns {{url: string, base: string, apiBase: string, commune: string}|null}
  */
 export function parsePortalUrl(value) {
   const text = String(value ?? '').trim();
@@ -95,9 +101,7 @@ export function parsePortalUrl(value) {
   }
   // A bare name is the path of the municipality on the shared host.
   if (/^[a-z0-9][a-z0-9_-]*$/i.test(text)) {
-    const commune = text.toLowerCase();
-    const base = `${AGORA_HOST}/${commune}`;
-    return { url: base, base, commune };
+    return agoraPortal(text.toLowerCase());
   }
   let url;
   try {
@@ -108,20 +112,38 @@ export function parsePortalUrl(value) {
   if (url.protocol !== 'https:' && url.protocol !== 'http:') {
     return null;
   }
-  // The portal speaks HTTPS only, and the password goes through it: an http://
-  // link copied from an old guide is upgraded rather than followed.
-  url.protocol = 'https:';
+  const host = url.hostname.toLowerCase();
   const segments = url.pathname
     .split('/')
     .filter(Boolean)
-    // `pck_home.home_view` and its siblings are pages, not the municipality.
-    .filter((segment) => !/^pck_/i.test(segment) && !segment.includes('.'));
+    // `pck_home.home_view`, `InternalApi` and their siblings are pages, not
+    // the municipality.
+    .filter(
+      (segment) =>
+        !/^pck_/i.test(segment) && !segment.includes('.') && !/^internalapi$/i.test(segment),
+    );
+  // The API address itself: the municipality is its sub-domain.
+  const subdomain = new RegExp(`^([a-z0-9-]+)\\.${AGORA_DOMAIN.replace('.', '\\.')}$`).exec(host);
+  if (subdomain && subdomain[1] !== 'portalssl' && subdomain[1] !== 'www') {
+    return agoraPortal(subdomain[1]);
+  }
   if (segments.length === 0) {
     return null;
   }
   const commune = segments[segments.length - 1].toLowerCase();
-  const base = `${url.origin}/${segments.join('/')}`;
-  return { url: base, base, commune };
+  if (host === new URL(AGORA_HOST).hostname) {
+    return agoraPortal(commune);
+  }
+  // A municipality behind its own name: pages and API on the same host. The
+  // portal speaks HTTPS only, and the password goes through it: an http://
+  // link copied from an old guide is upgraded rather than followed.
+  const base = `https://${url.host}/${segments.join('/')}`;
+  return { url: base, base, apiBase: `https://${url.host}`, commune };
+}
+
+function agoraPortal(commune) {
+  const base = `${AGORA_HOST}/${commune}`;
+  return { url: base, base, apiBase: `https://${commune}.${AGORA_DOMAIN}`, commune };
 }
 
 function hash(text) {

@@ -6,6 +6,7 @@ test('the portal address is read whatever shape it was pasted in', () => {
   const expected = {
     url: 'https://portalssl.agoraplus.fr/lognes',
     base: 'https://portalssl.agoraplus.fr/lognes',
+    apiBase: 'https://lognes.agoraplus.fr',
     commune: 'lognes',
   };
   for (const pasted of [
@@ -16,6 +17,8 @@ test('the portal address is read whatever shape it was pasted in', () => {
     'https://portalssl.agoraplus.fr/lognes/',
     'https://portalssl.agoraplus.fr/lognes/pck_home.home_view#/',
     'http://portalssl.agoraplus.fr/lognes/pck_home.home_view',
+    'https://lognes.agoraplus.fr/InternalApi/API_DASHBOARD/authentication',
+    'lognes.agoraplus.fr',
     '  https://portalssl.agoraplus.fr/lognes?x=1  ',
   ]) {
     assert.deepEqual(parsePortalUrl(pasted), expected, pasted);
@@ -26,6 +29,7 @@ test('a municipality behind its own host keeps it', () => {
   assert.deepEqual(parsePortalUrl('https://famille.ma-ville.fr/agora/pck_home.home_view#/'), {
     url: 'https://famille.ma-ville.fr/agora',
     base: 'https://famille.ma-ville.fr/agora',
+    apiBase: 'https://famille.ma-ville.fr',
     commune: 'agora',
   });
 });

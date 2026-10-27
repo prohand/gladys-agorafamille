@@ -1,13 +1,37 @@
 // -----------------------------------------------------------------------------
-// A fake Agora Famille portal: a `fetch` that answers the requests of
-// src/agora/endpoints.js from in-memory data, with a session cookie, the way
-// the real portal does (a login page in place of data once the session is
-// gone). No network in the tests.
+// A fake Agora Famille API: a `fetch` that answers the requests of
+// src/agora/endpoints.js from in-memory data. The login is the one captured
+// from the real portal (JSON LOGIN/PASSWORD, a session id sent back in the
+// `session_id` header); an unknown or expired session answers 401. No
+// network in the tests.
 // -----------------------------------------------------------------------------
 
 import { ENDPOINTS } from '../../src/agora/endpoints.js';
 
-export const BASE = 'https://portalssl.agoraplus.fr/testville';
+/** The API of the fake municipality, `testville`. */
+export const BASE = 'https://testville.agoraplus.fr';
+
+// The data requests of the real portal are not captured yet (`path: null`):
+// until they are, the tests give them addresses of their own, so the code
+// that reads the answers is exercised all the same.
+export const TEST_PATHS = {};
+for (const [name, endpoint] of Object.entries(ENDPOINTS)) {
+  if (!endpoint.path) {
+    TEST_PATHS[name] = `InternalApi/TEST/${name}`;
+  }
+}
+
+/** Give the unknown requests their test addresses; returns the undo. */
+export function useTestPaths() {
+  for (const [name, path] of Object.entries(TEST_PATHS)) {
+    ENDPOINTS[name].path = path;
+  }
+  return () => {
+    for (const name of Object.keys(TEST_PATHS)) {
+      ENDPOINTS[name].path = null;
+    }
+  };
+}
 
 /**
  * @param {object} [data] the family as the portal would serve it
@@ -27,7 +51,7 @@ export function createFakePortal(data = {}) {
     missing: new Set(),
     /** Set to make the next requests fail at the network level. */
     down: false,
-    /** Every request received: `{ path, method, query, body, cookie }`. */
+    /** Every request received: `{ path, method, query, body, headers }`. */
     requests: [],
     /** Requests to book / cancel, as received. */
     submitted: [],
@@ -37,7 +61,7 @@ export function createFakePortal(data = {}) {
 
   let sessionCounter = 0;
 
-  /** Drop every session: the next request gets the login page. */
+  /** Drop every session: the next request answers 401. */
   portal.expireSessions = () => portal.sessions.clear();
 
   portal.fetch = async (url, options = {}) => {
@@ -47,39 +71,38 @@ export function createFakePortal(data = {}) {
       throw error;
     }
     const target = new URL(url);
-    const path = target.pathname.replace(/^\/testville\//, '');
-    const cookie = options.headers?.cookie ?? '';
-    const session = /AGORA_SESSION=([^;]+)/.exec(cookie)?.[1];
+    if (target.origin !== BASE) {
+      return new Response('Bad Request', { status: 400 });
+    }
+    const path = target.pathname.replace(/^\//, '');
+    const headers = options.headers ?? {};
     const request = {
       path,
       method: options.method,
       query: Object.fromEntries(target.searchParams),
       body: options.body,
-      cookie,
+      headers,
     };
     portal.requests.push(request);
 
     if (path === ENDPOINTS.login.path) {
-      const form = new URLSearchParams(options.body);
+      const body = JSON.parse(options.body);
       if (
-        form.get(ENDPOINTS.login.fields.username) !== portal.username ||
-        form.get(ENDPOINTS.login.fields.password) !== portal.password
+        body[ENDPOINTS.login.fields.username] !== portal.username ||
+        body[ENDPOINTS.login.fields.password] !== portal.password
       ) {
-        return json({ success: false, message: 'Identifiants incorrects' });
+        return json({ SUCCESS: false, MESSAGE: 'Identifiants incorrects' });
       }
       sessionCounter += 1;
       const id = `s${sessionCounter}`;
       portal.sessions.add(id);
-      return new Response(null, {
-        status: 302,
-        headers: { location: 'pck_home.home_view', 'set-cookie': `AGORA_SESSION=${id}; Path=/` },
-      });
+      return json({ SUCCESS: true, SESSION_ID: id, REF_YEAR: 2026, USER: { NAME: 'Martin' } });
     }
 
-    if (!session || !portal.sessions.has(session)) {
-      return new Response('<html><body>Connexion</body></html>', {
-        status: 200,
-        headers: { 'content-type': 'text/html; charset=utf-8' },
+    if (!portal.sessions.has(headers.session_id)) {
+      return new Response(JSON.stringify({ MESSAGE: 'Session expirée' }), {
+        status: 401,
+        headers: { 'content-type': 'application/json' },
       });
     }
 
@@ -148,7 +171,7 @@ export function createMemoryStore(initial = null) {
 
 /** The configuration of the fake account. */
 export const CONFIG = {
-  portal_url: BASE,
+  portal_url: 'https://portalssl.agoraplus.fr/testville/pck_home.home_view#/',
   username: 'parent@example.com',
   password: 's3cret',
 };

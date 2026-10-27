@@ -59,6 +59,23 @@ export function describeError(error) {
             es: 'El portal no responde, se volverá a intentar',
           }) + `${where(language)}.`,
       );
+    case ERROR_CODES.UNMAPPED:
+      return localize(
+        (language) =>
+          pick(language, {
+            en: 'Signed in to the portal. The request that reads the',
+            fr: 'Connexion au portail réussie. La requête qui lit les',
+            de: 'Am Portal angemeldet. Die Anfrage, die die',
+            es: 'Sesión iniciada en el portal. La petición que lee los',
+          }) +
+          ` ${step ? pick(language, step) : '?'} ` +
+          pick(language, {
+            en: 'is not known yet: see the documentation.',
+            fr: "n'est pas encore connue : voir la documentation.",
+            de: 'liest, ist noch nicht bekannt: siehe die Dokumentation.',
+            es: 'aún no se conoce: vea la documentación.',
+          }),
+      );
     case ERROR_CODES.REFUSED:
       return localize(
         (language) =>

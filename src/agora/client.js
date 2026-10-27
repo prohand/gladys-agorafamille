@@ -1,18 +1,19 @@
 // -----------------------------------------------------------------------------
 // The HTTP client of one Agora Famille account.
 //
-// The portal is a web site, not an API: it keeps the signed-in state in a
-// session cookie, and an expired session does not answer 401 — it answers the
-// login page, with a 200 or a redirect. So every answer is checked for being
-// what was asked (JSON), and a login page in its place is read as "session
-// expired": sign in again, once, and repeat the request.
+// It talks to the API the portal pages use (`<commune>.agoraplus.fr/InternalApi`,
+// see src/agora/endpoints.js): sign in with the login and the password, keep
+// the session id the API answers and send it back in the `session_id` header
+// of every request, the way the pages do. An expired session answers 401/403
+// (or, on older portals, a login page or a redirect): sign in again, once, and
+// repeat the request.
 //
 // The password only ever leaves this module in the body of the login request,
-// over HTTPS. It is never logged, and neither are the cookies.
+// over HTTPS. It is never logged, and neither are the session id nor cookies.
 // -----------------------------------------------------------------------------
 
 import { createLogger } from '../logging.js';
-import { ENDPOINTS } from './endpoints.js';
+import { API_ACCESS, ENDPOINTS } from './endpoints.js';
 import { parseChildren, parseInvoices, parseMessages, parsePlanning } from './parse.js';
 
 const logger = createLogger({ name: 'agora' });
@@ -28,6 +29,7 @@ export const ERROR_CODES = {
   HTTP: 'http', // an answer, but an error status
   FORMAT: 'format', // an answer the integration cannot read
   REFUSED: 'refused', // a reservation or absence request the portal declined
+  UNMAPPED: 'unmapped', // a request of the portal not captured yet (endpoints.js)
 };
 
 export class AgoraError extends Error {
@@ -51,23 +53,27 @@ class SessionExpired extends Error {}
 export class AgoraClient {
   /**
    * @param {object} options
-   * @param {string} options.base portal of the municipality, without trailing slash
+   * @param {string} options.apiBase API of the municipality, e.g. https://opb.agoraplus.fr
+   * @param {string} [options.origin] origin of the portal pages, sent as `Origin`
    * @param {string} options.username
    * @param {string} options.password
    * @param {typeof fetch} [options.fetch] injected by the tests
    * @param {number} [options.timeoutMs]
    */
-  constructor({ base, username, password, fetch = globalThis.fetch, timeoutMs }) {
-    this.base = base;
+  constructor({ apiBase, origin, username, password, fetch = globalThis.fetch, timeoutMs }) {
+    this.base = apiBase;
+    this.origin = origin ?? null;
     this.username = username;
     this.password = password;
     this.fetch = fetch;
     this.timeoutMs = timeoutMs ?? REQUEST_TIMEOUT_MS;
     this.cookies = new Map();
+    this.sessionId = null;
+    this.refYear = null;
     this.signedIn = false;
   }
 
-  /** Sign in, and keep the session cookie for the next requests. */
+  /** Sign in, and keep the session id for the next requests. */
   async login() {
     if (!this.base || !this.username || !this.password) {
       throw new AgoraError(ERROR_CODES.CONFIG, 'Portal address, login or password missing', {
@@ -75,15 +81,13 @@ export class AgoraClient {
       });
     }
     this.cookies.clear();
+    this.sessionId = null;
+    this.refYear = null;
     this.signedIn = false;
     const { fields } = ENDPOINTS.login;
-    const body = new URLSearchParams({
-      [fields.username]: this.username,
-      [fields.password]: this.password,
-    });
     const response = await this.send(ENDPOINTS.login, {
-      body,
-      contentType: 'application/x-www-form-urlencoded',
+      body: JSON.stringify({ [fields.username]: this.username, [fields.password]: this.password }),
+      contentType: 'application/json',
       step: 'login',
     });
     if (response.status === 401 || response.status === 403) {
@@ -99,7 +103,7 @@ export class AgoraClient {
         step: 'login',
       });
     }
-    // A refused login answers 200 too, with a message: read it when it is JSON.
+    // A refused login may answer 200 too, with a message: read it when it is JSON.
     const answer = await readJson(response).catch(() => null);
     if (answer && isFailure(answer)) {
       throw new AgoraError(ERROR_CODES.AUTH, 'The portal refused the login or password', {
@@ -107,14 +111,23 @@ export class AgoraClient {
         step: 'login',
       });
     }
-    if (this.cookies.size === 0) {
-      throw new AgoraError(ERROR_CODES.AUTH, 'The portal opened no session after the login', {
-        status: response.status,
-        step: 'login',
-      });
+    // The names of the answer's fields, never their values: what is needed to
+    // adapt the integration to the portal, and nothing of the family's data.
+    const fieldNames = answer && typeof answer === 'object' ? keyPaths(answer).join(', ') : '';
+    this.sessionId =
+      response.headers.get('session_id') ??
+      response.headers.get('session-id') ??
+      findValue(answer, /^(session_?id|sessionid|id_?session|token|access_?token)$/i);
+    this.refYear = findValue(answer, /^(ref_?year|annee_?ref(erence)?|current_?year)$/i);
+    if (!this.sessionId && this.cookies.size === 0) {
+      throw new AgoraError(
+        ERROR_CODES.FORMAT,
+        `The login answer carries no session id (fields: ${fieldNames || 'none'})`,
+        { status: response.status, step: 'login' },
+      );
     }
     this.signedIn = true;
-    logger.debug('Signed in to the portal');
+    logger.info(`Signed in to the portal (answer fields: ${fieldNames || 'none'})`);
   }
 
   async getChildren() {
@@ -173,6 +186,14 @@ export class AgoraClient {
   async call(endpoint, options) {
     if (!this.signedIn) {
       await this.login();
+    }
+    if (!endpoint.path) {
+      throw new AgoraError(
+        ERROR_CODES.UNMAPPED,
+        `Signed in, but the portal request for "${options.step}" is not known yet ` +
+          '(src/agora/endpoints.js)',
+        { step: options.step },
+      );
     }
     try {
       return await this.requestJson(endpoint, options);
@@ -233,10 +254,16 @@ export class AgoraClient {
     for (const [name, value] of Object.entries(query ?? {})) {
       url.searchParams.set(name, value);
     }
+    // The headers the portal pages send: `null` (as text) before the login.
     const headers = {
       accept: 'application/json, text/plain, */*',
-      'x-requested-with': 'XMLHttpRequest',
+      session_id: this.sessionId ?? 'null',
+      ref_year: this.refYear ?? 'null',
+      a_access: API_ACCESS,
     };
+    if (this.origin) {
+      headers.origin = this.origin;
+    }
     if (contentType) {
       headers['content-type'] = contentType;
     }
@@ -250,8 +277,8 @@ export class AgoraClient {
         method: endpoint.method,
         headers,
         body: endpoint.method === 'GET' ? undefined : body,
-        // A redirect is how the portal says "sign in": followed, it would
-        // look like a successful page.
+        // A redirect is how an older portal says "sign in": followed, it
+        // would look like a successful page.
         redirect: 'manual',
         signal: AbortSignal.timeout(this.timeoutMs),
       });
@@ -327,23 +354,85 @@ async function readJson(response) {
   return JSON.parse(text);
 }
 
-/** `{ success: false }`, `{ erreur: "…" }`, `{ status: "KO" }`: the portal said no. */
+/**
+ * `{ success: false }`, `{ ERREUR: "…" }`, `{ status: "KO" }`: the portal said
+ * no. Field names are compared whatever their case: the API writes them in
+ * capitals (`LOGIN`, `PASSWORD`).
+ */
 function isFailure(answer) {
   if (!answer || typeof answer !== 'object' || Array.isArray(answer)) {
     return false;
   }
-  if (answer.success === false || answer.ok === false || answer.result === false) {
+  const value = (name) => field(answer, name);
+  if ([value('success'), value('ok'), value('result')].includes(false)) {
     return true;
   }
-  if (typeof answer.status === 'string' && /^(ko|error|erreur)$/i.test(answer.status)) {
+  const status = value('status');
+  if (typeof status === 'string' && /^(ko|error|erreur)$/i.test(status)) {
     return true;
   }
-  return Boolean(answer.erreur || answer.error || answer.errorMessage);
+  return Boolean(value('erreur') || value('error') || value('errormessage'));
 }
 
 function failureMessage(answer) {
-  const message = answer?.message ?? answer?.erreur ?? answer?.error ?? answer?.errorMessage;
+  const message =
+    field(answer, 'message') ??
+    field(answer, 'erreur') ??
+    field(answer, 'error') ??
+    field(answer, 'errormessage');
   return typeof message === 'string' && message.trim() ? message.trim().slice(0, 200) : null;
+}
+
+/** A top-level field of an object, whatever the case of its name. */
+function field(object, name) {
+  if (!object || typeof object !== 'object') {
+    return undefined;
+  }
+  const key = Object.keys(object).find((candidate) => candidate.toLowerCase() === name);
+  return key === undefined ? undefined : object[key];
+}
+
+/** The first non-empty scalar under a key matching `pattern`, at any depth. */
+function findValue(node, pattern, depth = 0) {
+  if (!node || typeof node !== 'object' || depth > 4) {
+    return null;
+  }
+  for (const [key, value] of Object.entries(node)) {
+    if (pattern.test(key) && ['string', 'number'].includes(typeof value) && value !== '') {
+      return String(value);
+    }
+  }
+  for (const value of Object.values(node)) {
+    const found = findValue(value, pattern, depth + 1);
+    if (found !== null) {
+      return found;
+    }
+  }
+  return null;
+}
+
+/** The field names of an answer (`A`, `B.C`, `D[].E`), at most 40 of them. */
+function keyPaths(node, prefix = '', depth = 0, paths = []) {
+  if (depth > 3 || paths.length >= 40) {
+    return paths;
+  }
+  if (Array.isArray(node)) {
+    if (node.length > 0) {
+      keyPaths(node[0], `${prefix}[]`, depth + 1, paths);
+    }
+    return paths;
+  }
+  if (node && typeof node === 'object') {
+    for (const [key, value] of Object.entries(node)) {
+      const path = prefix ? `${prefix}.${key}` : key;
+      if (value && typeof value === 'object') {
+        keyPaths(value, path, depth + 1, paths);
+      } else if (paths.length < 40) {
+        paths.push(path);
+      }
+    }
+  }
+  return paths;
 }
 
 /** `2026-11-05` → `05/11/2026`, the way the portal's forms write a day. */

@@ -1,12 +1,19 @@
-import { test } from 'node:test';
+import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { AgoraClient, ERROR_CODES, frenchDate } from '../src/agora/client.js';
 import { ENDPOINTS } from '../src/agora/endpoints.js';
-import { BASE, createFakePortal } from './helpers/fakePortal.js';
+import { BASE, createFakePortal, useTestPaths } from './helpers/fakePortal.js';
+
+let restorePaths;
+before(() => {
+  restorePaths = useTestPaths();
+});
+after(() => restorePaths());
 
 function clientFor(portal, overrides = {}) {
   return new AgoraClient({
-    base: BASE,
+    apiBase: BASE,
+    origin: 'https://portalssl.agoraplus.fr',
     username: portal.username,
     password: portal.password,
     fetch: portal.fetch,
@@ -14,7 +21,7 @@ function clientFor(portal, overrides = {}) {
   });
 }
 
-test('signs in once, then sends the session cookie', async () => {
+test('signs in once, the way the portal pages do, then sends the session id', async () => {
   const portal = createFakePortal();
   const client = clientFor(portal);
 
@@ -27,7 +34,17 @@ test('signs in once, then sends the session cookie', async () => {
   );
   const logins = portal.requests.filter((request) => request.path === ENDPOINTS.login.path);
   assert.equal(logins.length, 1);
-  assert.match(portal.requests.at(-1).cookie, /AGORA_SESSION=s1/);
+  const [login] = portal.requests;
+  assert.equal(login.method, 'POST');
+  assert.equal(login.path, 'InternalApi/API_DASHBOARD/authentication');
+  assert.deepEqual(JSON.parse(login.body), { LOGIN: portal.username, PASSWORD: portal.password });
+  assert.equal(login.headers['content-type'], 'application/json');
+  assert.equal(login.headers.session_id, 'null');
+  assert.equal(login.headers.ref_year, 'null');
+  assert.equal(login.headers.a_access, 'agora');
+  assert.equal(login.headers.origin, 'https://portalssl.agoraplus.fr');
+  assert.equal(portal.requests.at(-1).headers.session_id, 's1');
+  assert.equal(portal.requests.at(-1).headers.ref_year, '2026');
 });
 
 test('an expired session is renewed once, transparently', async () => {
@@ -132,4 +149,32 @@ test('a refused login logs what the portal answered, secrets masked', async (t) 
   assert.match(line, new RegExp(`POST ${BASE}/${ENDPOINTS.login.path}`));
   assert.match(line, /Bad Request p_login=\*\*\* p_password=\*\*\*/);
   assert.ok(!line.includes(portal.password) && !line.includes(portal.username));
+});
+
+test('a request not captured yet is said as such, after a successful sign-in', async (t) => {
+  const portal = createFakePortal();
+  const client = clientFor(portal);
+  const path = ENDPOINTS.children.path;
+  ENDPOINTS.children.path = null;
+  t.after(() => {
+    ENDPOINTS.children.path = path;
+  });
+  await assert.rejects(client.getChildren(), { code: ERROR_CODES.UNMAPPED, step: 'children' });
+  assert.equal(client.signedIn, true);
+  assert.equal(portal.requests.length, 1);
+});
+
+test('a login answer without a session names its fields, not their values', async () => {
+  const portal = createFakePortal();
+  const client = clientFor(portal);
+  client.fetch = async () =>
+    new Response(JSON.stringify({ RESULT: { NOM: 'Martin', CODE: 'secret-value' } }), {
+      headers: { 'content-type': 'application/json' },
+    });
+  await assert.rejects(client.getChildren(), (err) => {
+    assert.equal(err.code, ERROR_CODES.FORMAT);
+    assert.match(err.message, /fields: RESULT\.NOM, RESULT\.CODE/);
+    assert.ok(!err.message.includes('secret-value') && !err.message.includes('Martin'));
+    return true;
+  });
 });

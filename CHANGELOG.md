@@ -13,7 +13,9 @@ Release.
 ### Added
 
 - Agora Famille integration for Gladys 5.3+, started from the official JavaScript template:
-  sign-in to the family portal of the municipality, read on a timer (15 minutes minimum).
+  sign-in to the API of the municipality's family portal (`<commune>.agoraplus.fr`), read on a
+  timer (15 minutes minimum). The requests reading the children, the planning, the invoices and
+  the messages are not captured yet: "Test the connection" checks the sign-in and names them.
 - An **Agora Famille** account device (balance due, next invoice, last message) and one device
   per child (today's and tomorrow's bookings, canteen today and tomorrow).
 - Scene triggers: a new invoice, an invoice due soon, a message received, a booking that

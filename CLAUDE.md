@@ -55,9 +55,15 @@ src/i18n.js, messages.js  { en, fr, de, es } texts
   `parse.js` look a value up under several names and DROP an entry they cannot read rather
   than guess (a wrong guess books the wrong lunch). Add a spelling there, not a special case
   elsewhere.
-- **A session expires silently**: the portal answers its login page (HTML, 200) or a redirect.
-  `client.js` treats both as "session expired", signs in again once and repeats the request.
-  `redirect: 'manual'` is deliberate.
+- **The API is `https://<commune>.agoraplus.fr/InternalApi/…`**, not the portal pages host
+  (`portalssl.agoraplus.fr/<commune>`): `config.apiBase` vs `config.portalBase`. Sign-in is
+  `POST InternalApi/API_DASHBOARD/authentication` with JSON `{LOGIN, PASSWORD}` and headers
+  `session_id: null`, `ref_year: null`, `a_access: agora` (captured from a real browser); the
+  session id answered goes back in `session_id`. A 401/403 (or a login page / redirect on older
+  portals) means "session expired": `client.js` signs in again once.
+- **Data requests not captured yet have `path: null`**: the client signs in, then throws
+  `UNMAPPED` naming the step. Never invent a path: capture it ("Copy as cURL" in the browser).
+  Tests give them `InternalApi/TEST/<name>` through `useTestPaths()` (test/helpers/fakePortal.js).
 - **Events are differences between two reads.** The first read of an account fires nothing; a
   day entering the watched window is not a change; the read that follows a request made by an
   action never fires events (no loops through scenes). The last read is persisted in `/data`.
