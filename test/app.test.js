@@ -224,22 +224,6 @@ test('the widget renders exactly as sent, in every language', async (t) => {
   }
 });
 
-test('the widget absence form cancels the booked day', async (t) => {
-  const { gladys, app, portal } = await start();
-  t.after(() => app.stop());
-  const ack = await gladys.fake.widgetAction(
-    FAMILY_WIDGET,
-    WIDGET_ACTIONS.ABSENCE,
-    {},
-    { settings: {}, values: { child: '101', day: '0' } },
-  );
-  assert.equal(ack.success, true, ack.error);
-  assert.deepEqual(portal.submitted.map((entry) => [entry.kind, entry.IdInscription]).sort(), [
-    ['absence', 1101],
-    ['absence', 2101],
-  ]);
-});
-
 test('wrong credentials are said on the Configuration screen', async (t) => {
   const portal = family();
   portal.password = 'changed';
@@ -372,22 +356,6 @@ test('without menu nor children request, the children come from the planning', a
   );
 });
 
-test('the widget offers no button for a request not captured yet', async (t) => {
-  const paths = { reserve: ENDPOINTS.reserve.path, absence: ENDPOINTS.absence.path };
-  ENDPOINTS.reserve.path = null;
-  ENDPOINTS.absence.path = null;
-  t.after(() => Object.assign(ENDPOINTS.reserve, { path: paths.reserve }));
-  t.after(() => Object.assign(ENDPOINTS.absence, { path: paths.absence }));
-  const { gladys, app } = await start();
-  t.after(() => app.stop());
-  const ack = await gladys.fake.widgetGet(FAMILY_WIDGET, { settings: {}, language: 'fr' });
-  const content = ack.data.content ?? ack.data;
-  const actions = content.components
-    .filter((component) => component.type === 'button' && component.action)
-    .map((component) => component.action.key);
-  assert.deepEqual(actions, [WIDGET_ACTIONS.REFRESH]);
-});
-
 test('a booking to pay online is undone, and the parent sent to the portal', async (t) => {
   const portal = family();
   const { gladys, app } = await start(portal);
@@ -428,4 +396,32 @@ test('a cancellation with a penalty is never sent', async (t) => {
   assert.equal(ack.success, false);
   assert.match(ack.error, /penalty/);
   assert.deepEqual(portal.submitted, []);
+});
+
+test('the widget is read-only, with the last three unread messages', async (t) => {
+  const portal = family();
+  portal.messages = Array.from({ length: 6 }, (_, index) => ({
+    idMessage: index + 1,
+    objet: `Message ${index + 1}`,
+    expediteur: 'Mairie',
+    dateEnvoi: `0${index + 1}/10/2026`,
+  }));
+  const { gladys, app } = await start(portal);
+  t.after(() => app.stop());
+  const ack = await gladys.fake.widgetGet(FAMILY_WIDGET, { settings: {}, language: 'fr' });
+  const content = ack.data.content ?? ack.data;
+  const buttons = content.components.filter((component) => component.type === 'button');
+  assert.deepEqual(
+    buttons.map((button) => button.action?.key ?? 'link'),
+    [WIDGET_ACTIONS.REFRESH, 'link'],
+  );
+  // The balance with its cents, the reader's way.
+  assert.equal(content.components.find((component) => component.type === 'value').value, '45,20');
+  const cards = content.components.find((component) => component.type === 'card-list').items;
+  // The invoice to pay first, then only the three newest unread messages.
+  assert.equal(cards[0].badge.text, 'À payer');
+  assert.deepEqual(
+    cards.filter((card) => card.badge.text === 'Message').map((card) => card.title),
+    ['Message 6', 'Message 5', 'Message 4'],
+  );
 });

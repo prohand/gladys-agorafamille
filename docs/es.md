@@ -129,11 +129,11 @@ El widget **Agora Famille** del panel muestra:
 - el saldo pendiente (en directo);
 - para cada niño (5 como máximo), lo reservado hoy y mañana (verde:
   reservado, naranja: solicitud pendiente, rojo: rechazado);
-- las facturas por pagar y los mensajes sin leer;
+- las facturas por pagar y los 3 últimos mensajes sin leer;
 - la hora de la última lectura, o el error actual.
 
-Y cuatro botones: **Actualizar**, **Ausencia** y **Reservar comida** (un
-breve formulario pide el niño y el día), **Abrir portal**.
+Y dos botones: **Actualizar** y **Abrir portal**. Las ausencias y las reservas
+se hacen con las acciones de escena, o en el portal.
 
 ## Solución de problemas
 

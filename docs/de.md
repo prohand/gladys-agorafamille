@@ -129,11 +129,11 @@ Das Dashboard-Widget **Agora Famille** zeigt:
 - den offenen Betrag (live);
 - für jedes Kind (höchstens 5), was heute und morgen gebucht ist (grün:
   gebucht, orange: Anfrage offen, rot: abgelehnt);
-- die offenen Rechnungen und die ungelesenen Nachrichten;
+- die offenen Rechnungen und die letzten 3 ungelesenen Nachrichten;
 - die Uhrzeit des letzten Lesens oder den aktuellen Fehler.
 
-Und vier Tasten: **Aktualisieren**, **Abwesenheit** und **Essen buchen** (ein
-kurzes Formular fragt nach Kind und Tag), **Portal öffnen**.
+Und zwei Tasten: **Aktualisieren** und **Portal öffnen**. Abwesenheiten und
+Buchungen laufen über die Szenen-Aktionen oder das Portal.
 
 ## Fehlerbehebung
 

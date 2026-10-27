@@ -128,11 +128,11 @@ The **Agora Famille** dashboard widget shows:
 - the balance due (live);
 - for each child (5 at most), what is booked today and tomorrow (green:
   booked, orange: request pending, red: refused);
-- the invoices to pay and the unread messages;
+- the invoices to pay and the last 3 unread messages;
 - the time of the last read, or the current error.
 
-And four buttons: **Refresh**, **Absence** and **Book a lunch** (a short form
-asks for the child and the day), **Open portal**.
+And two buttons: **Refresh** and **Open portal**. Absences and bookings go
+through the scene actions, or the portal.
 
 ## Troubleshooting
 

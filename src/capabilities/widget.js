@@ -2,9 +2,9 @@
 // Dashboard widget (Gladys 5.1+): the family portal at a glance.
 //
 // What a parent opens the portal for, on the dashboard: what is owed, who eats
-// at the canteen today and tomorrow, the invoices to pay and the unread
-// messages. And the two things they do there most: declare an absence (a sick
-// child) and book a forgotten lunch, each behind a short form.
+// at the canteen today and tomorrow, the invoices to pay and the last unread
+// messages. Read-only, kept short: booking and absences are scene actions,
+// and the portal is one tap away.
 //
 // The content is declarative (the core renders it, no HTML): see the "Dashboard
 // widgets" section of the SDK README for the vocabulary and the budget — at
@@ -13,19 +13,18 @@
 
 import { WIDGET_COLORS } from '@gladysassistant/integration-sdk';
 import { createLogger } from '../logging.js';
-import { ENDPOINTS, PAGES } from '../agora/endpoints.js';
-import { addDays, daysBetween, formatDay } from '../agora/dates.js';
-import { EXPECTED_STATUSES, RESERVATION_STATUS } from '../agora/parse.js';
+import { PAGES } from '../agora/endpoints.js';
+import { addDays, daysBetween } from '../agora/dates.js';
+import { RESERVATION_STATUS } from '../agora/parse.js';
 import {
+  balanceOf,
   dayEntries,
   expectedActivities,
   unpaidInvoices,
   unreadMessages,
 } from '../agora/snapshot.js';
-import { ACCOUNT_FEATURES, accountIds } from '../devices/index.js';
-import { localize, pick } from '../i18n.js';
+import { pick } from '../i18n.js';
 import { NOTHING_PLANNED, TODAY, TOMORROW, describeError, formatEuros } from '../messages.js';
-import { matchesActivity } from './scenes.js';
 
 const logger = createLogger({ name: 'widget' });
 
@@ -33,13 +32,16 @@ const logger = createLogger({ name: 'widget' });
 export const FAMILY_WIDGET = 'family';
 
 /** The widget actions, relayed back by key. Never renamed. */
-export const WIDGET_ACTIONS = { REFRESH: 'refresh', ABSENCE: 'absence', RESERVE: 'reserve' };
+export const WIDGET_ACTIONS = { REFRESH: 'refresh' };
 
 /** The status list holds 10 rows: two per child. */
 const MAX_CHILDREN = 5;
 
 /** The card list holds 8 rows. */
 const MAX_CARDS = 8;
+
+/** Unread messages listed: the last ones only, the list stays readable. */
+export const MAX_MESSAGES = 3;
 
 /** Texts of the vocabulary are capped by the core; cut them ourselves, cleanly. */
 const LIMITS = { statusLabel: 40, statusValue: 40, cardTitle: 60, caption: 80 };
@@ -48,13 +50,12 @@ const LIMITS = { statusLabel: 40, statusValue: 40, cardTitle: 60, caption: 80 };
  * The content of the `family` widget.
  *
  * @param {object} state
- * @param {object} state.gladys
  * @param {object} state.config normalized configuration
  * @param {object|null} state.snapshot last read of the portal
  * @param {object|null} state.error the error of the last read, if it failed
  * @param {string} [state.language] the reader's language
  */
-export function buildWidgetContent({ gladys, config, snapshot, error, language = 'en' }) {
+export function buildWidgetContent({ config, snapshot, error, language = 'en' }) {
   const say = (texts) => pick(language, texts);
   if (!config.configured) {
     return {
@@ -69,12 +70,16 @@ export function buildWidgetContent({ gladys, config, snapshot, error, language =
     };
   }
 
+  // Written here rather than bound to the balance feature: a bound tile
+  // shows the raw state (64.8), an amount reads with its cents (64,80). The
+  // widget is nudged after every read, so it follows the balance all the same.
   const components = [
     {
       type: 'value',
       label: say({ en: 'To pay', fr: 'À payer', de: 'Zu zahlen', es: 'A pagar' }),
       icon: 'credit-card',
-      device_feature: accountIds(gladys, config).feature(ACCOUNT_FEATURES.BALANCE),
+      value: formatAmount(balanceOf(snapshot), language),
+      unit: '€',
     },
   ];
 
@@ -97,39 +102,6 @@ export function buildWidgetContent({ gladys, config, snapshot, error, language =
     style: 'secondary',
     action: { key: WIDGET_ACTIONS.REFRESH },
   });
-
-  const children = (snapshot?.children ?? []).slice(0, MAX_CHILDREN);
-  // A request the integration cannot make yet (its address not captured,
-  // see endpoints.js) gets no button: one that always fails is worse.
-  if (children.length > 0 && ENDPOINTS.absence.path) {
-    components.push({
-      type: 'button',
-      label: say({ en: 'Absence', fr: 'Absence', de: 'Abwesenheit', es: 'Ausencia' }),
-      icon: 'user-x',
-      style: 'secondary',
-      action: {
-        key: WIDGET_ACTIONS.ABSENCE,
-        fields: formFields(children, snapshot.today),
-      },
-    });
-  }
-  if (children.length > 0 && ENDPOINTS.reserve.path) {
-    components.push({
-      type: 'button',
-      label: say({
-        en: 'Book a lunch',
-        fr: 'Réserver un repas',
-        de: 'Essen buchen',
-        es: 'Reservar comida',
-      }),
-      icon: 'calendar',
-      style: 'secondary',
-      action: {
-        key: WIDGET_ACTIONS.RESERVE,
-        fields: formFields(children, snapshot.today),
-      },
-    });
-  }
 
   components.push({
     type: 'button',
@@ -217,7 +189,7 @@ function buildCards(snapshot, language) {
             },
     });
   }
-  for (const message of unreadMessages(snapshot)) {
+  for (const message of unreadMessages(snapshot).slice(0, MAX_MESSAGES)) {
     cards.push({
       title: cut(message.subject, LIMITS.cardTitle),
       ...(message.sender ? { subtitle: cut(message.sender, LIMITS.cardTitle) } : {}),
@@ -257,42 +229,6 @@ function caption(snapshot, error, language) {
 }
 
 /**
- * The form behind the Absence and Book buttons: which child, which day. Form
- * labels are multi-language objects (the core picks the reader's language).
- */
-function formFields(children, today) {
-  return [
-    {
-      key: 'child',
-      type: 'select',
-      required: true,
-      default: children[0].id,
-      label: { en: 'Child', fr: 'Enfant', de: 'Kind', es: 'Niño' },
-      options: children.map((child) => ({
-        value: child.id,
-        label: localize(() => cut(child.name, 40)),
-      })),
-    },
-    {
-      key: 'day',
-      type: 'select',
-      required: true,
-      default: '1',
-      label: { en: 'Day', fr: 'Jour', de: 'Tag', es: 'Día' },
-      options: [0, 1, 2, 3].map((offset) => ({
-        value: String(offset),
-        label:
-          offset === 0
-            ? TODAY
-            : offset === 1
-              ? TOMORROW
-              : localize((language) => formatDay(addDays(today, offset), language)),
-      })),
-    },
-  ];
-}
-
-/**
  * The widget, wired to the integration state.
  *
  * @param {object} context
@@ -314,86 +250,29 @@ export function createWidget({ gladys, getConfig, getService, onSynced }) {
       });
     },
 
-    async action(actionKey, params, { values } = {}) {
+    async action(actionKey) {
       logger.info(`Widget action ${actionKey}`);
-      const service = getService();
-      if (actionKey === WIDGET_ACTIONS.REFRESH) {
-        const result = await service.sync({ force: true });
-        await onSynced(result);
-        if (result.error) {
-          throw new Error(describeError(result.error).en);
-        }
-        return { en: 'Portal read', fr: 'Portail lu', de: 'Portal gelesen', es: 'Portal leído' };
-      }
-      if (actionKey !== WIDGET_ACTIONS.ABSENCE && actionKey !== WIDGET_ACTIONS.RESERVE) {
+      if (actionKey !== WIDGET_ACTIONS.REFRESH) {
         throw new Error(`Unknown widget action: ${actionKey}`);
       }
-      // An older core drops the form and relays the tap without values:
-      // refuse rather than act on a child nobody chose.
-      if (!values?.child) {
-        throw new Error('This Gladys version does not send the form: update Gladys');
-      }
-      const snapshot = service.snapshot;
-      const child = snapshot?.children.find((candidate) => candidate.id === values.child);
-      if (!child) {
-        throw new Error('Unknown child: refresh the widget');
-      }
-      const day = addDays(snapshot.today, Number(values.day ?? 0));
-      const entries = dayEntries(snapshot, child.id, day);
-      if (actionKey === WIDGET_ACTIONS.ABSENCE) {
-        const targets = entries.filter((entry) => EXPECTED_STATUSES.includes(entry.status));
-        if (targets.length === 0) {
-          return {
-            en: `${child.name} has nothing booked that day.`,
-            fr: `${child.name} n'a rien de réservé ce jour-là.`,
-            de: `${child.name} hat an dem Tag nichts gebucht.`,
-            es: `${child.name} no tiene nada reservado ese día.`,
-          };
-        }
-        for (const entry of targets) {
-          await onSynced(
-            await service.requestAbsence({ childId: child.id, day, activityId: entry.activityId }),
-          );
-        }
-        return {
-          en: `Absence requested for ${child.name}.`,
-          fr: `Absence demandée pour ${child.name}.`,
-          de: `Abwesenheit für ${child.name} angefragt.`,
-          es: `Ausencia solicitada para ${child.name}.`,
-        };
-      }
-      const meals = entries.filter((entry) => matchesActivity(entry, 'cantine'));
-      if (meals.some((entry) => EXPECTED_STATUSES.includes(entry.status))) {
-        return {
-          en: `${child.name} already has lunch booked.`,
-          fr: `Le repas de ${child.name} est déjà réservé.`,
-          de: `Das Essen für ${child.name} ist bereits gebucht.`,
-          es: `La comida de ${child.name} ya está reservada.`,
-        };
-      }
-      const target = meals[0];
-      if (!target) {
-        return {
-          en: `${child.name} is not registered for the canteen that day.`,
-          fr: `${child.name} n'est pas inscrit(e) à la cantine ce jour-là.`,
-          de: `${child.name} ist an dem Tag nicht für die Kantine angemeldet.`,
-          es: `${child.name} no está inscrito/a en el comedor ese día.`,
-        };
-      }
-      const result = await service.requestReservation({
-        childId: child.id,
-        day,
-        activityId: target.activityId,
-      });
+      const result = await getService().sync({ force: true });
       await onSynced(result);
-      return {
-        en: `Lunch requested for ${child.name}.`,
-        fr: `Repas demandé pour ${child.name}.`,
-        de: `Essen für ${child.name} angefragt.`,
-        es: `Comida solicitada para ${child.name}.`,
-      };
+      if (result.error) {
+        throw new Error(describeError(result.error).en);
+      }
+      return { en: 'Portal read', fr: 'Portail lu', de: 'Portal gelesen', es: 'Portal leído' };
     },
   };
+}
+
+/** An amount with its two decimals, the reader's way: 64,80 / 64.80. */
+export function formatAmount(amount, language) {
+  const locale = { en: 'en-IE', fr: 'fr-FR', de: 'de-DE', es: 'es-ES' }[language] ?? 'en-IE';
+  return new Intl.NumberFormat(locale, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+    useGrouping: false,
+  }).format(amount);
 }
 
 function cut(text, length) {

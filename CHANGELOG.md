@@ -39,15 +39,13 @@ Release.
   parent sent to the portal.
 - The children are the targets of the reservation calendar (`API_CALENDAR_COMPONENT/target`),
   the sign-in menu remaining the fallback.
-- The widget shows the Absence and "Book a lunch" buttons only once their portal requests are
-  known.
 - An **Agora Famille** account device (balance due, next invoice, last message) and one device
   per child (today's and tomorrow's bookings, canteen today and tomorrow).
 - Scene triggers: a new invoice, an invoice due soon, a message received, a booking that
   changes state (filterable by child and state).
 - Scene actions: read the portal, check a child's day, declare an absence, book a day.
-- **Agora Famille** dashboard widget: balance, children today and tomorrow, invoices to pay,
-  unread messages, absence and lunch forms, link to the portal.
+- **Agora Famille** dashboard widget: balance with its cents, children today and tomorrow,
+  invoices to pay, the last 3 unread messages, a refresh button and a link to the portal.
 - "Test the connection" action naming the step that fails, with the portal's own message.
 - The sign-in follows the portal pages: the password, Base64-encoded, is first encrypted by the
   portal, and that is what the sign-in sends (sent as typed, the portal answered "Exception

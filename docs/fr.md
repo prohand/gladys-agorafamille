@@ -132,11 +132,11 @@ Le widget **Agora Famille** du tableau de bord montre :
 - le reste à payer (en direct) ;
 - pour chaque enfant (5 au plus), ce qui est réservé aujourd'hui et demain
   (vert : réservé, orange : demande en attente, rouge : refusé) ;
-- les factures à payer et les messages non lus ;
+- les factures à payer et les 3 derniers messages non lus ;
 - l'heure de la dernière lecture, ou l'erreur en cours.
 
-Et quatre boutons : **Actualiser**, **Absence** et **Réserver un repas** (un
-petit formulaire demande l'enfant et le jour), **Ouvrir le portail**.
+Et deux boutons : **Actualiser** et **Ouvrir le portail**. Les absences et
+les réservations se font par les actions de scène, ou sur le portail.
 
 ## Dépannage
 
