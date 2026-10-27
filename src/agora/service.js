@@ -61,8 +61,11 @@ export function createAgoraService({ config, store, fetch, now = () => new Date(
 
   async function read() {
     const today = dayOf(now());
-    const children = await client.getChildren();
+    let children = await childrenOrNone();
     const planning = await client.getPlanning(today, addDays(today, config.days_ahead), children);
+    if (children.length === 0) {
+      children = childrenOfPlanning(planning);
+    }
     // Invoices and messages are modules a municipality may not have bought:
     // a portal without them answers 404, which is "nothing", not a failure.
     const modules = {};
@@ -77,6 +80,22 @@ export function createAgoraService({ config, store, fetch, now = () => new Date(
       messages,
       modules,
     });
+  }
+
+  // The planning of the API names each child by its id: without the request
+  // that lists the children (not captured yet, see endpoints.js), the
+  // children are the ones the planning names, "Enfant <id>" until their
+  // names are known. The id is what the devices hang on, so the names can
+  // come later without changing a device.
+  async function childrenOrNone() {
+    try {
+      return await client.getChildren();
+    } catch (err) {
+      if (err instanceof AgoraError && err.code === ERROR_CODES.UNMAPPED) {
+        return [];
+      }
+      throw err;
+    }
   }
 
   async function run() {
@@ -194,4 +213,10 @@ async function optional(read, module, modules) {
     }
     throw err;
   }
+}
+
+/** The children a planning names, when nothing else names them. */
+export function childrenOfPlanning(planning) {
+  const ids = [...new Set(planning.map((entry) => entry.childId))].sort();
+  return ids.map((id) => ({ id, firstName: `Enfant ${id}`, lastName: null, name: `Enfant ${id}` }));
 }

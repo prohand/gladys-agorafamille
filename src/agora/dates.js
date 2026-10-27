@@ -77,7 +77,8 @@ export function parseDay(value) {
     }
     return valid(match[1], match[2], match[3]);
   }
-  match = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2}|\d{4})$/.exec(text);
+  // `26/10/2026`, or `26/10/2026 08:00:00` as the API writes a start time.
+  match = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2}|\d{4})(?:[ T]\d{1,2}:\d{2}(?::\d{2})?)?$/.exec(text);
   if (match) {
     const year = match[3].length === 2 ? `20${match[3]}` : match[3];
     return valid(year, match[2].padStart(2, '0'), match[1].padStart(2, '0'));

@@ -16,6 +16,9 @@ Release.
   sign-in to the API of the municipality's family portal (`<commune>.agoraplus.fr`), read on a
   timer (15 minutes minimum). The requests reading the children, the planning, the invoices and
   the messages are not captured yet: "Test the connection" checks the sign-in and names them.
+- The planning answer of the API (`DATA.EVENTS`) is read: day, activity, child and whether the
+  day is booked. Until the request listing the children is known, the children are the ones the
+  planning names ("Enfant <id>").
 - An **Agora Famille** account device (balance due, next invoice, last message) and one device
   per child (today's and tomorrow's bookings, canteen today and tomorrow).
 - Scene triggers: a new invoice, an invoice due soon, a message received, a booking that

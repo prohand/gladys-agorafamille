@@ -11,6 +11,8 @@
 // an invoice that does not exist.
 //
 // Adding a spelling a portal uses is a one-word change in the lists below.
+// Names are matched whatever their case: the API of the portal writes them in
+// capitals (`DATA.EVENTS`, `START_DATE_TIME`), older pages in camelCase.
 // -----------------------------------------------------------------------------
 
 import { parseDay } from './dates.js';
@@ -37,7 +39,7 @@ export const EXPECTED_STATUSES = [RESERVATION_STATUS.RESERVED, RESERVATION_STATU
 const LIST_KEYS = ['data', 'result', 'results', 'items', 'liste', 'list', 'rows', 'content'];
 
 const CHILD_LIST_KEYS = ['enfants', 'children', 'lstEnfants', 'listeEnfants', 'membres'];
-const PLANNING_LIST_KEYS = ['planning', 'reservations', 'presences', 'jours', 'events'];
+const PLANNING_LIST_KEYS = ['events', 'planning', 'reservations', 'presences', 'jours'];
 const INVOICE_LIST_KEYS = ['factures', 'invoices', 'lstFactures', 'listeFactures'];
 const MESSAGE_LIST_KEYS = ['messages', 'notifications', 'lstMessages', 'listeMessages'];
 
@@ -45,10 +47,23 @@ const FIELDS = {
   childId: ['idEnfant', 'id_enfant', 'childId', 'child_id', 'idPersonne', 'id', 'code', 'num'],
   firstName: ['prenom', 'firstName', 'first_name', 'firstname', 'prenomEnfant'],
   lastName: ['nom', 'lastName', 'last_name', 'lastname', 'nomEnfant'],
-  planningChild: ['idEnfant', 'id_enfant', 'childId', 'child_id', 'idPersonne', 'enfant.id'],
+  // `ID_TARGET` is `<person id>$<n>` in the planning of the API (see childOf).
+  planningChild: [
+    'idEnfant',
+    'id_enfant',
+    'childId',
+    'child_id',
+    'idPersonne',
+    'enfant.id',
+    'ID_TARGET',
+  ],
   planningChildName: ['prenomEnfant', 'prenom', 'enfant.prenom', 'childName'],
-  day: ['date', 'jour', 'dateJour', 'date_jour', 'day', 'datePresence', 'start'],
+  day: ['START_DATE_TIME', 'date', 'jour', 'dateJour', 'date_jour', 'day', 'datePresence', 'start'],
+  // The API names the activity in `NAME_GROUP` ("Restauration scolaire",
+  // "Accueil De Loisirs Vacances - Élémentaire") and the place and period in
+  // `DESCRIPTION` ("Vacances Toussaint - Élémentaire Jules Ferry").
   activity: [
+    'NAME_GROUP',
     'libelleActivite',
     'libelle_activite',
     'activite',
@@ -60,6 +75,7 @@ const FIELDS = {
     'title',
   ],
   activityId: [
+    'ID_EVENT',
     'idActivite',
     'id_activite',
     'activityId',
@@ -134,14 +150,14 @@ export function parsePlanning(payload, children = []) {
   const entries = [];
   const seen = new Set();
   for (const entry of listOf(payload, PLANNING_LIST_KEYS)) {
-    let childId = text(first(entry, FIELDS.planningChild));
+    let childId = childOf(first(entry, FIELDS.planningChild));
     if (!childId) {
       const name = text(first(entry, FIELDS.planningChildName));
       childId = children.find((child) => child.firstName === name)?.id ?? null;
     }
     const day = parseDay(first(entry, FIELDS.day));
     const activity = text(first(entry, FIELDS.activity));
-    const status = parseReservationStatus(first(entry, FIELDS.status));
+    const status = parseReservationStatus(first(entry, FIELDS.status)) ?? selectionOf(entry);
     if (!childId || !day || !activity || !status) {
       continue;
     }
@@ -151,9 +167,65 @@ export function parsePlanning(payload, children = []) {
       continue;
     }
     seen.add(key);
-    entries.push({ childId, day, activity, activityId, status });
+    const planned = { childId, day, activity, activityId, status };
+    const refs = referencesOf(entry);
+    if (refs) {
+      planned.refs = refs;
+    }
+    entries.push(planned);
   }
   return entries.sort((a, b) => a.day.localeCompare(b.day) || a.activity.localeCompare(b.activity));
+}
+
+/** `4412$0` → `4412`: the person the API's `ID_TARGET` points at. */
+function childOf(value) {
+  const id = text(value);
+  return id ? id.split('$')[0] || null : null;
+}
+
+/**
+ * The state of a day of the API's planning, which has no state label: a day
+ * is booked when it is selected (`IS_SELECTED: 1`), otherwise the child is
+ * registered for the activity and the day is not booked. What the other flags
+ * say (`IS_UNAVAILABLE`, `PRESENCE_TYPE`, an absence) is not known yet: they
+ * are kept in `refs`, never guessed.
+ */
+function selectionOf(entry) {
+  const selected = get(entry, 'IS_SELECTED');
+  if (selected === undefined || selected === null || selected === '') {
+    return null;
+  }
+  return toBoolean(selected) ? RESERVATION_STATUS.RESERVED : RESERVATION_STATUS.REGISTERED;
+}
+
+/** The ids of the API a booking or an absence request will need, as they came. */
+const REFERENCE_FIELDS = [
+  'ID_EVENT',
+  'ID_INSCRIPTION',
+  'ID_CALENDAR',
+  'ID_TARGET',
+  'ID_GROUP',
+  'IS_UNAVAILABLE',
+  'PRESENCE_TYPE',
+  'PRESENCE_VALUE',
+];
+
+function referencesOf(entry) {
+  const refs = {};
+  for (const name of REFERENCE_FIELDS) {
+    const value = get(entry, name);
+    if (value !== undefined && value !== null && typeof value !== 'object') {
+      refs[name] = value;
+    }
+  }
+  const rules = get(entry, 'DAILY_ROULES_OBJ');
+  for (const name of ['CAN_SUBSCRIPTION', 'CAN_UNSUBSCRIPTION', 'INSERT_ABSENCE']) {
+    const value = get(rules, name);
+    if (value !== undefined && value !== null && typeof value !== 'object') {
+      refs[name] = value;
+    }
+  }
+  return Object.keys(refs).length > 0 ? refs : null;
 }
 
 /**
@@ -318,8 +390,9 @@ export function listOf(payload, names, depth = 0) {
     return [];
   }
   for (const name of [...names, ...LIST_KEYS]) {
-    if (payload[name] !== undefined) {
-      const found = listOf(payload[name], names, depth + 1);
+    const value = get(payload, name);
+    if (value !== undefined) {
+      const found = listOf(value, names, depth + 1);
       if (found.length > 0) {
         return found;
       }
@@ -328,10 +401,23 @@ export function listOf(payload, names, depth = 0) {
   return [];
 }
 
+/** A field of an object: by its exact name, else whatever the case. */
+function get(node, name) {
+  if (!node || typeof node !== 'object') {
+    return undefined;
+  }
+  if (node[name] !== undefined) {
+    return node[name];
+  }
+  const lower = name.toLowerCase();
+  const key = Object.keys(node).find((candidate) => candidate.toLowerCase() === lower);
+  return key === undefined ? undefined : node[key];
+}
+
 /** The first value found under one of the names (dotted names reach into objects). */
 function first(entry, names) {
   for (const name of names) {
-    const value = name.split('.').reduce((node, part) => node?.[part], entry);
+    const value = name.split('.').reduce((node, part) => get(node, part), entry);
     if (value !== undefined && value !== null && value !== '') {
       return value;
     }

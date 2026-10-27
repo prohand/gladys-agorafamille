@@ -309,6 +309,21 @@ test('with the data requests not captured yet, the sign-in is still checked', as
   const ack = await gladys.fake.action('test_connection', {});
   const message = ack.data.message ?? ack.data;
   assert.match(message.fr, /Connexion au portail réussie/);
-  assert.match(message.fr, /enfants/);
+  assert.match(message.fr, /planning/);
   assert.equal(gladys.fake.connectionStatus.connected, false);
+});
+
+test('without the children request, the children come from the planning', async (t) => {
+  const path = ENDPOINTS.children.path;
+  ENDPOINTS.children.path = null;
+  t.after(() => {
+    ENDPOINTS.children.path = path;
+  });
+  const { gladys, app } = await start();
+  t.after(() => app.stop());
+  assert.deepEqual(
+    gladys.fake.discoveredDevices.map((device) => device.name),
+    ['Agora Famille', 'Enfant 101', 'Enfant 102'],
+  );
+  assert.equal(gladys.fake.connectionStatus.connected, true);
 });

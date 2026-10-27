@@ -1,4 +1,5 @@
 import { test } from 'node:test';
+import { readFile } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import {
   RESERVATION_STATUS,
@@ -184,4 +185,37 @@ test('days are counted in Paris, not in UTC', () => {
   assert.equal(parseDay('20261105'), '2026-11-05');
   assert.equal(parseDay('31/02/2026'), null);
   assert.equal(parseDay('2026-11-04T23:30:00Z'), '2026-11-05');
+});
+
+test('the planning of the API (DATA.EVENTS) is read', async () => {
+  // Captured from a real portal (October 2026, Toussaint holidays), trimmed;
+  // the last day is marked selected to cover a booked day.
+  const payload = JSON.parse(
+    await readFile(new URL('./fixtures/planning-events.json', import.meta.url), 'utf8'),
+  );
+  const planning = parsePlanning(payload);
+  assert.equal(planning.length, 4);
+  assert.deepEqual(planning[0], {
+    childId: '4412',
+    day: '2026-10-26',
+    activity: 'Accueil De Loisirs Vacances - Élémentaire',
+    activityId: '1481',
+    status: RESERVATION_STATUS.REGISTERED,
+    refs: {
+      ID_EVENT: 1481,
+      ID_INSCRIPTION: 389940,
+      ID_CALENDAR: 9937,
+      ID_TARGET: '4412$0',
+      ID_GROUP: 99,
+      IS_UNAVAILABLE: 0,
+      PRESENCE_TYPE: 0,
+      CAN_SUBSCRIPTION: 0,
+      CAN_UNSUBSCRIPTION: 0,
+      INSERT_ABSENCE: 0,
+    },
+  });
+  const booked = planning.find((entry) => entry.day === '2026-10-27');
+  assert.equal(booked.childId, '9268');
+  assert.equal(booked.status, RESERVATION_STATUS.RESERVED);
+  assert.deepEqual([...new Set(planning.map((entry) => entry.childId))].sort(), ['4412', '9268']);
 });
