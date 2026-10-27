@@ -155,11 +155,6 @@ export function createApp(gladys, { fetch, store = createStore(), now } = {}) {
   const sceneActions = createSceneActions({ gladys, getConfig, getService, onSynced });
   gladys.onSceneAction(SCENE_ACTIONS.REFRESH, sceneActions[SCENE_ACTIONS.REFRESH]);
   gladys.onSceneAction(SCENE_ACTIONS.CHECK_DAY, sceneActions[SCENE_ACTIONS.CHECK_DAY]);
-  gladys.onSceneAction(SCENE_ACTIONS.DECLARE_ABSENCE, sceneActions[SCENE_ACTIONS.DECLARE_ABSENCE]);
-  gladys.onSceneAction(
-    SCENE_ACTIONS.REQUEST_RESERVATION,
-    sceneActions[SCENE_ACTIONS.REQUEST_RESERVATION],
-  );
 
   // --- Dashboard widget --------------------------------------------------------
   const widget = createWidget({ gladys, getConfig, getService, onSynced });

@@ -215,7 +215,12 @@
         {
           "key": "label",
           "type": "string",
-          "label": { "en": "Invoice", "fr": "Facture", "de": "Rechnung", "es": "Factura" }
+          "label": {
+            "en": "Invoice",
+            "fr": "Facture",
+            "de": "Rechnung",
+            "es": "Factura"
+          }
         },
         {
           "key": "amount",
@@ -267,7 +272,12 @@
         {
           "key": "label",
           "type": "string",
-          "label": { "en": "Invoice", "fr": "Facture", "de": "Rechnung", "es": "Factura" }
+          "label": {
+            "en": "Invoice",
+            "fr": "Facture",
+            "de": "Rechnung",
+            "es": "Factura"
+          }
         },
         {
           "key": "amount",
@@ -329,17 +339,32 @@
         {
           "key": "subject",
           "type": "string",
-          "label": { "en": "Subject", "fr": "Objet", "de": "Betreff", "es": "Asunto" }
+          "label": {
+            "en": "Subject",
+            "fr": "Objet",
+            "de": "Betreff",
+            "es": "Asunto"
+          }
         },
         {
           "key": "sender",
           "type": "string",
-          "label": { "en": "Sender", "fr": "Expéditeur", "de": "Absender", "es": "Remitente" }
+          "label": {
+            "en": "Sender",
+            "fr": "Expéditeur",
+            "de": "Absender",
+            "es": "Remitente"
+          }
         },
         {
           "key": "date",
           "type": "string",
-          "label": { "en": "Date", "fr": "Date", "de": "Datum", "es": "Fecha" }
+          "label": {
+            "en": "Date",
+            "fr": "Date",
+            "de": "Datum",
+            "es": "Fecha"
+          }
         }
       ]
     },
@@ -362,7 +387,12 @@
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Child", "fr": "Enfant", "de": "Kind", "es": "Niño" },
+          "label": {
+            "en": "Child",
+            "fr": "Enfant",
+            "de": "Kind",
+            "es": "Niño"
+          },
           "required": false
         },
         {
@@ -378,15 +408,30 @@
           "options": [
             {
               "value": "reserved",
-              "label": { "en": "Booked", "fr": "Réservé", "de": "Gebucht", "es": "Reservado" }
+              "label": {
+                "en": "Booked",
+                "fr": "Réservé",
+                "de": "Gebucht",
+                "es": "Reservado"
+              }
             },
             {
               "value": "requested",
-              "label": { "en": "Requested", "fr": "Demandé", "de": "Angefragt", "es": "Solicitado" }
+              "label": {
+                "en": "Requested",
+                "fr": "Demandé",
+                "de": "Angefragt",
+                "es": "Solicitado"
+              }
             },
             {
               "value": "refused",
-              "label": { "en": "Refused", "fr": "Refusé", "de": "Abgelehnt", "es": "Rechazado" }
+              "label": {
+                "en": "Refused",
+                "fr": "Refusé",
+                "de": "Abgelehnt",
+                "es": "Rechazado"
+              }
             },
             {
               "value": "absence_requested",
@@ -399,7 +444,12 @@
             },
             {
               "value": "absent",
-              "label": { "en": "Absent", "fr": "Absent", "de": "Abwesend", "es": "Ausente" }
+              "label": {
+                "en": "Absent",
+                "fr": "Absent",
+                "de": "Abwesend",
+                "es": "Ausente"
+              }
             },
             {
               "value": "registered",
@@ -417,17 +467,32 @@
         {
           "key": "child_name",
           "type": "string",
-          "label": { "en": "Child", "fr": "Enfant", "de": "Kind", "es": "Niño" }
+          "label": {
+            "en": "Child",
+            "fr": "Enfant",
+            "de": "Kind",
+            "es": "Niño"
+          }
         },
         {
           "key": "activity",
           "type": "string",
-          "label": { "en": "Activity", "fr": "Activité", "de": "Aktivität", "es": "Actividad" }
+          "label": {
+            "en": "Activity",
+            "fr": "Activité",
+            "de": "Aktivität",
+            "es": "Actividad"
+          }
         },
         {
           "key": "date",
           "type": "string",
-          "label": { "en": "Day", "fr": "Jour", "de": "Tag", "es": "Día" }
+          "label": {
+            "en": "Day",
+            "fr": "Jour",
+            "de": "Tag",
+            "es": "Día"
+          }
         },
         {
           "key": "status",
@@ -541,7 +606,12 @@
           "key": "child",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Child", "fr": "Enfant", "de": "Kind", "es": "Niño" },
+          "label": {
+            "en": "Child",
+            "fr": "Enfant",
+            "de": "Kind",
+            "es": "Niño"
+          },
           "required": true
         },
         {
@@ -593,178 +663,12 @@
         {
           "key": "date",
           "type": "string",
-          "label": { "en": "Day", "fr": "Jour", "de": "Tag", "es": "Día" }
-        }
-      ]
-    },
-    {
-      "key": "declare_absence",
-      "label": {
-        "en": "Declare a child's absence",
-        "fr": "Déclarer l'absence d'un enfant",
-        "de": "Abwesenheit eines Kindes melden",
-        "es": "Declarar la ausencia de un niño"
-      },
-      "description": {
-        "en": "Ask the municipality to cancel the booked activities of a day.",
-        "fr": "Demande à la commune d'annuler les activités réservées d'une journée.",
-        "de": "Bittet die Gemeinde, die gebuchten Aktivitäten eines Tages zu stornieren.",
-        "es": "Pide al municipio que cancele las actividades reservadas de un día."
-      },
-      "timeout_seconds": 120,
-      "fields": [
-        {
-          "key": "child",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Child", "fr": "Enfant", "de": "Kind", "es": "Niño" },
-          "required": true
-        },
-        {
-          "key": "day",
-          "type": "number",
           "label": {
-            "en": "Day (0 today, 1 tomorrow…)",
-            "fr": "Jour (0 aujourd'hui, 1 demain…)",
-            "de": "Tag (0 heute, 1 morgen…)",
-            "es": "Día (0 hoy, 1 mañana…)"
-          },
-          "required": false,
-          "default": 0,
-          "min": 0,
-          "max": 60
-        },
-        {
-          "key": "activity",
-          "type": "string",
-          "label": {
-            "en": "Activity (empty: all)",
-            "fr": "Activité (vide : toutes)",
-            "de": "Aktivität (leer: alle)",
-            "es": "Actividad (vacío: todas)"
-          },
-          "placeholder": {
-            "en": "e.g. canteen",
-            "fr": "ex. cantine",
-            "de": "z. B. Kantine",
-            "es": "p. ej. comedor"
-          },
-          "required": false
-        }
-      ],
-      "outputs": [
-        {
-          "key": "requested_count",
-          "type": "number",
-          "label": {
-            "en": "Absences requested",
-            "fr": "Absences demandées",
-            "de": "Angefragte Abwesenheiten",
-            "es": "Ausencias solicitadas"
+            "en": "Day",
+            "fr": "Jour",
+            "de": "Tag",
+            "es": "Día"
           }
-        },
-        {
-          "key": "activities",
-          "type": "string",
-          "label": {
-            "en": "Activities",
-            "fr": "Activités",
-            "de": "Aktivitäten",
-            "es": "Actividades"
-          }
-        },
-        {
-          "key": "date",
-          "type": "string",
-          "label": { "en": "Day", "fr": "Jour", "de": "Tag", "es": "Día" }
-        }
-      ]
-    },
-    {
-      "key": "request_reservation",
-      "label": {
-        "en": "Book a day for a child",
-        "fr": "Réserver une journée",
-        "de": "Einen Tag für ein Kind buchen",
-        "es": "Reservar un día para un niño"
-      },
-      "description": {
-        "en": "Ask for a day of an activity the child is registered to (the canteen by default).",
-        "fr": "Demande une journée d'une activité à laquelle l'enfant est inscrit (la cantine par défaut).",
-        "de": "Fragt einen Tag einer Aktivität an, für die das Kind angemeldet ist (standardmäßig die Kantine).",
-        "es": "Solicita un día de una actividad en la que el niño está inscrito (el comedor por defecto)."
-      },
-      "timeout_seconds": 120,
-      "fields": [
-        {
-          "key": "child",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Child", "fr": "Enfant", "de": "Kind", "es": "Niño" },
-          "required": true
-        },
-        {
-          "key": "day",
-          "type": "number",
-          "label": {
-            "en": "Day (0 today, 1 tomorrow…)",
-            "fr": "Jour (0 aujourd'hui, 1 demain…)",
-            "de": "Tag (0 heute, 1 morgen…)",
-            "es": "Día (0 hoy, 1 mañana…)"
-          },
-          "required": false,
-          "default": 1,
-          "min": 0,
-          "max": 60
-        },
-        {
-          "key": "activity",
-          "type": "string",
-          "label": {
-            "en": "Activity (empty: canteen)",
-            "fr": "Activité (vide : cantine)",
-            "de": "Aktivität (leer: Kantine)",
-            "es": "Actividad (vacío: comedor)"
-          },
-          "placeholder": {
-            "en": "e.g. after-school club",
-            "fr": "ex. garderie du soir",
-            "de": "z. B. Nachmittagsbetreuung",
-            "es": "p. ej. guardería de tarde"
-          },
-          "required": false
-        }
-      ],
-      "outputs": [
-        {
-          "key": "requested",
-          "type": "boolean",
-          "label": {
-            "en": "Booking requested",
-            "fr": "Réservation demandée",
-            "de": "Buchung angefragt",
-            "es": "Reserva solicitada"
-          }
-        },
-        {
-          "key": "already_booked",
-          "type": "boolean",
-          "label": {
-            "en": "Already booked",
-            "fr": "Déjà réservé",
-            "de": "Bereits gebucht",
-            "es": "Ya reservado"
-          }
-        },
-        {
-          "key": "activity",
-          "type": "string",
-          "label": { "en": "Activity", "fr": "Activité", "de": "Aktivität", "es": "Actividad" }
-        },
-        {
-          "key": "date",
-          "type": "string",
-          "label": { "en": "Day", "fr": "Jour", "de": "Tag", "es": "Día" }
         }
       ]
     }

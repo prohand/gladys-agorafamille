@@ -24,7 +24,14 @@ import {
   unreadMessages,
 } from '../agora/snapshot.js';
 import { pick } from '../i18n.js';
-import { NOTHING_PLANNED, TODAY, TOMORROW, describeError, formatEuros } from '../messages.js';
+import {
+  NOTHING_PLANNED,
+  TODAY,
+  TOMORROW,
+  describeError,
+  formatAmount,
+  formatEuros,
+} from '../messages.js';
 
 const logger = createLogger({ name: 'widget' });
 
@@ -71,8 +78,9 @@ export function buildWidgetContent({ config, snapshot, error, language = 'en' })
   }
 
   // Written here rather than bound to the balance feature: a bound tile
-  // shows the raw state (64.8), an amount reads with its cents (64,80). The
-  // widget is nudged after every read, so it follows the balance all the same.
+  // shows the raw state (64.8), an amount reads with its cents (64,80), never
+  // rounded. The widget is nudged after every read, so it follows the balance
+  // all the same.
   const components = [
     {
       type: 'value',
@@ -263,16 +271,6 @@ export function createWidget({ gladys, getConfig, getService, onSynced }) {
       return { en: 'Portal read', fr: 'Portail lu', de: 'Portal gelesen', es: 'Portal leído' };
     },
   };
-}
-
-/** An amount with its two decimals, the reader's way: 64,80 / 64.80. */
-export function formatAmount(amount, language) {
-  const locale = { en: 'en-IE', fr: 'fr-FR', de: 'de-DE', es: 'es-ES' }[language] ?? 'en-IE';
-  return new Intl.NumberFormat(locale, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-    useGrouping: false,
-  }).format(amount);
 }
 
 function cut(text, length) {

@@ -131,3 +131,14 @@ test('balance and canteen are computed from the read', () => {
   assert.equal(hasMeal(current, '7', '2026-11-04'), true);
   assert.equal(hasMeal(current, '7', '2026-11-05'), false);
 });
+
+test('the balance is the exact sum, never rounded', () => {
+  const current = snapshot({
+    invoices: [
+      invoice('F1', { remaining: 0.1 }),
+      invoice('F2', { remaining: 0.2 }),
+      invoice('F3', { remaining: 12.345 }),
+    ],
+  });
+  assert.equal(balanceOf(current), 12.645);
+});

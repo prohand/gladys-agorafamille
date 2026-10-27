@@ -29,6 +29,13 @@ test('every manifest action is registered', () => {
   }
 });
 
+test('the integration only reads: no scene action books or cancels', () => {
+  assert.deepEqual(manifest.scene_actions.map((action) => action.key).sort(), [
+    'check_day',
+    'refresh',
+  ]);
+});
+
 test('every scene action of the manifest has a handler, and the other way round', () => {
   assert.deepEqual(
     manifest.scene_actions.map((action) => action.key).sort(),
@@ -175,7 +182,7 @@ function multiLanguageTexts(node, path = 'manifest') {
 
 test('every multi-language text of the manifest carries en, fr, de and es', () => {
   const texts = multiLanguageTexts(manifest);
-  assert.ok(texts.length > 80, `only ${texts.length} texts found`);
+  assert.ok(texts.length > 60, `only ${texts.length} texts found`);
   for (const { path, text } of texts) {
     assert.deepEqual(Object.keys(text).sort(), [...LANGUAGES].sort(), `${path}: languages`);
     for (const language of LANGUAGES) {

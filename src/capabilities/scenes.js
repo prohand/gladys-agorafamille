@@ -10,26 +10,22 @@
 //   reservation_changed   a booked or requested day changed state (accepted,
 //                         refused, cancelled…)
 //
-// Actions, declared in the manifest `scene_actions`:
+// Actions, declared in the manifest `scene_actions` — reads only: the
+// integration never books nor cancels anything on the portal.
 //
 //   refresh               read the portal now
 //   check_day             is a child booked on a day, and for what
-//   declare_absence       cancel a child's booked day (sick child, strike…)
-//   request_reservation   ask for a day of an activity the child is registered to
 //
 // The doctrine of the core: an event is not a state (the canteen of tomorrow is
-// a device feature), one event per change, and never an event as the
-// consequence of an action — the read that follows a request does not compare
-// against the request itself, only against the previous read.
+// a device feature), and one event per change.
 // -----------------------------------------------------------------------------
 
 import { createLogger } from '../logging.js';
 import { addDays } from '../agora/dates.js';
-import { EXPECTED_STATUSES, RESERVATION_STATUS, isMeal } from '../agora/parse.js';
+import { RESERVATION_STATUS } from '../agora/parse.js';
 import {
   SCENE_TRIGGERS,
   balanceOf,
-  dayEntries,
   expectedActivities,
   hasMeal,
   unpaidInvoices,
@@ -46,15 +42,10 @@ export { SCENE_TRIGGERS };
 export const SCENE_ACTIONS = {
   REFRESH: 'refresh',
   CHECK_DAY: 'check_day',
-  DECLARE_ABSENCE: 'declare_absence',
-  REQUEST_RESERVATION: 'request_reservation',
 };
 
 /** The reservation states a `reservation_changed` filter offers. */
 export const TRIGGER_STATUSES = Object.values(RESERVATION_STATUS);
-
-/** Words that mean "the canteen" whatever the municipality calls it. */
-const MEAL_WORDS = ['cantine', 'canteen', 'meal', 'repas', 'kantine', 'comedor', 'lunch'];
 
 /**
  * Fire the scene triggers of a read. Never throws: a trigger the core refused
@@ -128,67 +119,6 @@ export function createSceneActions({ gladys, getConfig, getService, onSynced }) 
         activities: activities.join(', '),
       };
     },
-
-    async [SCENE_ACTIONS.DECLARE_ABSENCE](fields) {
-      const snapshot = await sync();
-      const child = await childOf(fields, snapshot);
-      const day = addDays(snapshot.today, dayOffset(fields.day));
-      const targets = dayEntries(snapshot, child.id, day).filter(
-        (entry) =>
-          EXPECTED_STATUSES.includes(entry.status) && matchesActivity(entry, fields.activity),
-      );
-      for (const entry of targets) {
-        logger.info(`Absence requested: ${child.name}, ${entry.activity}, ${day}`);
-        await onSynced(
-          await getService().requestAbsence({
-            childId: child.id,
-            day,
-            activityId: entry.activityId,
-          }),
-        );
-      }
-      return {
-        date: day,
-        requested_count: targets.length,
-        activities: targets.map((entry) => entry.activity).join(', '),
-      };
-    },
-
-    async [SCENE_ACTIONS.REQUEST_RESERVATION](fields) {
-      const snapshot = await sync();
-      const child = await childOf(fields, snapshot);
-      const day = addDays(snapshot.today, dayOffset(fields.day));
-      // The portal books a day of an activity the child is registered to for
-      // the period: that day is in the planning, as not booked.
-      const entries = dayEntries(snapshot, child.id, day).filter((entry) =>
-        matchesActivity(entry, fields.activity || 'cantine'),
-      );
-      const already = entries.find((entry) => EXPECTED_STATUSES.includes(entry.status));
-      if (already) {
-        return { date: day, requested: false, already_booked: true, activity: already.activity };
-      }
-      const target = entries.find((entry) =>
-        [
-          RESERVATION_STATUS.REGISTERED,
-          RESERVATION_STATUS.ABSENT,
-          RESERVATION_STATUS.REFUSED,
-        ].includes(entry.status),
-      );
-      if (!target) {
-        throw new Error(
-          `${child.name} is not registered for "${fields.activity || 'cantine'}" on ${day}`,
-        );
-      }
-      logger.info(`Reservation requested: ${child.name}, ${target.activity}, ${day}`);
-      await onSynced(
-        await getService().requestReservation({
-          childId: child.id,
-          day,
-          activityId: target.activityId,
-        }),
-      );
-      return { date: day, requested: true, already_booked: false, activity: target.activity };
-    },
   };
 }
 
@@ -196,24 +126,4 @@ export function createSceneActions({ gladys, getConfig, getService, onSynced }) 
 function dayOffset(value) {
   const number = Math.round(Number(value ?? 0));
   return Number.isFinite(number) ? Math.max(0, Math.min(60, number)) : 0;
-}
-
-/**
- * Whether a planned entry is the activity a scene names: empty is every
- * activity, a word meaning "canteen" is the meal whatever the municipality
- * calls it, anything else is a part of the activity label.
- */
-export function matchesActivity(entry, wanted) {
-  const query = normalize(wanted ?? '');
-  if (!query) {
-    return true;
-  }
-  if (MEAL_WORDS.includes(query)) {
-    return isMeal(entry.activity);
-  }
-  return normalize(entry.activity).includes(query);
-}
-
-function normalize(value) {
-  return String(value).normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
 }

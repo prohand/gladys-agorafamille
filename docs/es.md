@@ -14,8 +14,8 @@ en Gladys:
   el último mensaje;
 - **disparadores de escena** (nueva factura, factura a punto de vencer, nuevo
   mensaje, reserva aceptada o rechazada);
-- **acciones de escena** (declarar una ausencia, reservar una comida,
-  comprobar un día, volver a leer el portal);
+- **acciones de escena** de lectura (comprobar un día, volver a leer el
+  portal);
 - un **widget** del panel.
 
 ## Antes de empezar
@@ -96,21 +96,13 @@ guarda la última lectura en `/data`).
 
 ### Acciones
 
-| Acción                              | Qué hace                                                                                            | Salidas                                                    |
-| ----------------------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| **Leer el portal familiar**         | Lee el portal ahora mismo.                                                                          | `success`, `balance`, `unpaid_invoices`, `unread_messages` |
-| **Comprobar el día de un niño**     | Si el niño está reservado ese día (0 = hoy, 1 = mañana…) y para qué.                                | `has_meal`, `booked_count`, `activities`, `date`           |
-| **Declarar la ausencia de un niño** | Pide cancelar las actividades reservadas de un día. Actividad vacía = todas; «comedor» = la comida. | `requested_count`, `activities`, `date`                    |
-| **Reservar un día para un niño**    | Solicita un día de una actividad en la que el niño está inscrito (el comedor por defecto).          | `requested`, `already_booked`, `activity`, `date`          |
+| Acción                          | Qué hace                                                             | Salidas                                                    |
+| ------------------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------- |
+| **Leer el portal familiar**     | Lee el portal ahora mismo.                                           | `success`, `balance`, `unpaid_invoices`, `unread_messages` |
+| **Comprobar el día de un niño** | Si el niño está reservado ese día (0 = hoy, 1 = mañana…) y para qué. | `has_meal`, `booked_count`, `activities`, `date`           |
 
-Las solicitudes pasan por el portal: el municipio las valida según sus
-propios plazos. El disparador «una reserva cambia» le avisa de su respuesta.
-
-La integración aplica las reglas del calendario del portal y rechaza, con el
-motivo, lo que el portal no permitiría: un día pasado, reservas cerradas, una
-actividad completa, un día con varias tarifas a elegir, una cancelación con
-recargo. Una reserva que se paga en línea se retira del carrito enseguida:
-hágala en el portal.
+La integración solo **lee** el portal: nunca reserva ni cancela nada. Las
+reservas y las ausencias se hacen en el portal.
 
 ### Ejemplos
 
@@ -120,7 +112,6 @@ hágala en el portal.
   {{triggerEvent.data.amount}} € a pagar antes del
   {{triggerEvent.data.due_date}}».
 - **Una reserva cambia**, filtrado en _Rechazado_ → notificación.
-- Un botón «Niño enfermo» → _Declarar la ausencia_ para hoy.
 
 ## El widget
 
@@ -133,7 +124,7 @@ El widget **Agora Famille** del panel muestra:
 - la hora de la última lectura, o el error actual.
 
 Y dos botones: **Actualizar** y **Abrir portal**. Las ausencias y las reservas
-se hacen con las acciones de escena, o en el portal.
+se hacen en el portal.
 
 ## Solución de problemas
 

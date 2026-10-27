@@ -106,27 +106,6 @@ export const ENDPOINTS = {
     path: 'InternalApi/API_DASHBOARD/emailLogs/0/1',
     body: { order: 'SEND_DATE DESC', limit: 10, page: 1, filter: '%' },
   },
-  /**
-   * Book or cancel days, one request for both, as the reservation calendar
-   * does (agoraplus_calendar_service.bookActivities and
-   * reservations_area_controller.getDataToBook, October 2026):
-   * POST /InternalApi/API_CALENDAR_COMPONENT/booking/?idContext=1&lang=fr
-   * with `[{ IdInscription, Day: "dd/mm/yyyy", IdDefTarif, IsMajored,
-   * DeleteBasketEvent }]`. A booking sends the day's only rate in
-   * IdDefTarif; a cancellation sends -1, and DeleteBasketEvent 1 for a
-   * basket day. Answers `{ TYPE_RESULT, DATA: { outputInfo: { BookingInfo,
-   * ProviderInfo } } }`; a ProviderInfo.Url means an online payment.
-   */
-  reserve: {
-    method: 'POST',
-    path: 'InternalApi/API_CALENDAR_COMPONENT/booking/',
-    params: { idContext: '1', lang: 'fr' },
-  },
-  absence: {
-    method: 'POST',
-    path: 'InternalApi/API_CALENDAR_COMPONENT/booking/',
-    params: { idContext: '1', lang: 'fr' },
-  },
 };
 
 /** The portal pages a person opens, for the links of the widget and the docs. */

@@ -53,8 +53,6 @@ export function createFakePortal(data = {}) {
     down: false,
     /** Every request received: `{ path, method, query, body, headers }`. */
     requests: [],
-    /** Requests to book / cancel, as received. */
-    submitted: [],
     sessions: new Set(),
     ...data,
   };
@@ -190,43 +188,10 @@ export function createFakePortal(data = {}) {
         return json({ factures: portal.invoices });
       case 'messages':
         return json(portal.messages);
-      case 'reserve':
-      case 'absence':
-        return book(JSON.parse(options.body));
       default:
         return new Response('Not found', { status: 404 });
     }
   };
-
-  // The calendar's booking request: one line per day. A rate books the day,
-  // -1 cancels it, DeleteBasketEvent 0 empties the basket of an unpaid one.
-  function book(lines) {
-    for (const line of lines) {
-      const kind =
-        line.DeleteBasketEvent === 0 ? 'basket' : line.IdDefTarif > 0 ? 'reserve' : 'absence';
-      portal.submitted.push({ kind, ...line });
-      const day = portal.planning.find(
-        (entry) =>
-          entry.ID_INSCRIPTION === line.IdInscription && entry.START_DATE_TIME.startsWith(line.Day),
-      );
-      if (day && kind === 'reserve' && !portal.paymentUrl) {
-        day.IS_SELECTED = 1;
-      }
-      if (day && kind === 'absence') {
-        day.IS_SELECTED = 0;
-      }
-    }
-    return json({
-      DATA: {
-        outputInfo: {
-          BookingInfo: [],
-          ProviderInfo: { Url: portal.paymentUrl ?? '', Name: '', Token: '' },
-        },
-      },
-      ERROR: {},
-      TYPE_RESULT: 1,
-    });
-  }
 
   return portal;
 }

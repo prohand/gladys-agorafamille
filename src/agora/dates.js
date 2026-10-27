@@ -56,7 +56,7 @@ export function daysBetween(from, to) {
  *
  * Seen in the wild: `2026-11-05`, `2026-11-05T00:00:00`, `05/11/2026`,
  * `05/11/26`, `20261105`, and epoch milliseconds. Anything else is `null`,
- * never a guess: a wrong day books the wrong lunch.
+ * never a guess: a wrong day shows the wrong lunch.
  *
  * @returns {string|null} `YYYY-MM-DD`
  */

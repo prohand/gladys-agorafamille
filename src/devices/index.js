@@ -6,9 +6,8 @@
 //     whether they eat at the canteen — the two questions a family asks the
 //     portal every evening.
 //
-// Everything is read-only: a booking is a request to the municipality, with an
-// answer that comes later, not a switch to flip. Requests go through the scene
-// actions and the widget, which say what was asked and read the portal again.
+// Everything is read-only: the integration reads the portal, it never books
+// nor cancels anything there.
 //
 // External ids are forever (Gladys keys history, scenes and dashboards on
 // them): the account is the commune plus a hash of the login, a child is the
@@ -21,7 +20,7 @@ import {
   DEVICE_FEATURE_UNITS,
   DEVICE_TRANSPORTS,
 } from '@gladysassistant/integration-sdk';
-import { NOTHING_PLANNED } from '../messages.js';
+import { NOTHING_PLANNED, formatAmount } from '../messages.js';
 import {
   balanceOf,
   dayAt,
@@ -204,7 +203,7 @@ function describeNextInvoice(snapshot) {
   if (!next) {
     return 'Aucune facture à payer';
   }
-  const amount = next.remaining.toFixed(2).replace('.', ',');
+  const amount = formatAmount(next.remaining, 'fr');
   const due = next.dueOn ? ` avant le ${next.dueOn.split('-').reverse().join('/')}` : '';
   return truncate(`${amount} €${due} — ${next.label}`);
 }

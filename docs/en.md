@@ -14,8 +14,7 @@ gives you in Gladys:
   message;
 - **scene triggers** (new invoice, invoice due soon, new message, booking
   accepted or refused);
-- **scene actions** (declare an absence, book a lunch, check a day, read the
-  portal again);
+- read-only **scene actions** (check a day, read the portal again);
 - a dashboard **widget**.
 
 ## Before you start
@@ -96,21 +95,13 @@ the last read in `/data`).
 
 ### Actions
 
-| Action                        | What it does                                                                               | Outputs                                                    |
-| ----------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------- |
-| **Read the family portal**    | Reads the portal right now.                                                                | `success`, `balance`, `unpaid_invoices`, `unread_messages` |
-| **Check a child's day**       | Whether the child is booked that day (0 = today, 1 = tomorrow…) and for what.              | `has_meal`, `booked_count`, `activities`, `date`           |
-| **Declare a child's absence** | Asks to cancel the booked activities of a day. Empty activity = all; "canteen" = the meal. | `requested_count`, `activities`, `date`                    |
-| **Book a day for a child**    | Asks for a day of an activity the child is registered to (the canteen by default).         | `requested`, `already_booked`, `activity`, `date`          |
+| Action                     | What it does                                                                  | Outputs                                                    |
+| -------------------------- | ----------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| **Read the family portal** | Reads the portal right now.                                                   | `success`, `balance`, `unpaid_invoices`, `unread_messages` |
+| **Check a child's day**    | Whether the child is booked that day (0 = today, 1 = tomorrow…) and for what. | `has_meal`, `booked_count`, `activities`, `date`           |
 
-Requests go through the portal: the municipality approves them, within its
-own deadlines. The "a booking changes" trigger tells you its answer.
-
-The integration applies the rules of the portal's own calendar, and refuses,
-with the reason, what the portal would not let you do: a past day, closed
-bookings, a full activity, a day with several rates to choose from, a
-cancellation that costs a penalty. A booking paid online is taken out of the
-basket at once: make it on the portal.
+The integration only **reads** the portal: it never books nor cancels
+anything. Bookings and absences are made on the portal.
 
 ### Examples
 
@@ -119,7 +110,6 @@ basket at once: make it on the portal.
 - **An invoice is due soon** → send "Invoice of {{triggerEvent.data.amount}} €
   to pay before {{triggerEvent.data.due_date}}".
 - **A booking changes**, filtered on _Refused_ → notification.
-- A "Sick child" button → _Declare a child's absence_ for today.
 
 ## The widget
 
@@ -131,8 +121,8 @@ The **Agora Famille** dashboard widget shows:
 - the invoices to pay and the last 3 unread messages;
 - the time of the last read, or the current error.
 
-And two buttons: **Refresh** and **Open portal**. Absences and bookings go
-through the scene actions, or the portal.
+And two buttons: **Refresh** and **Open portal**. Absences and bookings are
+made on the portal.
 
 ## Troubleshooting
 

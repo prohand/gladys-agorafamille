@@ -13,8 +13,8 @@ invoices, messages. Requires Gladys 5.3+. Cloud transport, France only.
 It signs in to the portal with the family's account and reads it on a timer: one account device
 (balance, next invoice, last message), one device per child (today / tomorrow bookings, canteen
 today / tomorrow), scene triggers (`invoice_issued`, `invoice_due_soon`, `message_received`,
-`reservation_changed`), scene actions (`refresh`, `check_day`, `declare_absence`,
-`request_reservation`) and a `family` dashboard widget.
+`reservation_changed`), read-only scene actions (`refresh`, `check_day`) and a `family`
+dashboard widget. **Read-only by design**: it never books nor cancels anything on the portal.
 
 ## Commands
 
@@ -22,7 +22,7 @@ today / tomorrow), scene triggers (`invoice_issued`, `invoice_due_soon`, `messag
 npm install
 npm test                                  # node --test (built-in runner)
 node --test test/snapshot.test.js         # one file
-node --test --test-name-pattern "absence" # tests whose name matches
+node --test --test-name-pattern "invoice" # tests whose name matches
 npm run lint                              # eslint .
 npm run format:check                      # prettier --check . (CI gate)
 npm run format                            # prettier --write .
@@ -53,7 +53,7 @@ src/i18n.js, messages.js  { en, fr, de, es } texts
 
 - **No official API.** Every request lives in `src/agora/endpoints.js`; the readers in
   `parse.js` look a value up under several names and DROP an entry they cannot read rather
-  than guess (a wrong guess books the wrong lunch). Add a spelling there, not a special case
+  than guess (a wrong guess shows the wrong lunch). Add a spelling there, not a special case
   elsewhere.
 - **The API is `https://<commune>.agoraplus.fr/InternalApi/…`**, not the portal pages host
   (`portalssl.agoraplus.fr/<commune>`): `config.apiBase` vs `config.portalBase`. Sign-in is two
@@ -68,11 +68,6 @@ src/i18n.js, messages.js  { en, fr, de, es } texts
   request before guessing. Lists (invoices, messages) are POSTs of `{order, limit, page,
 filter}`; errors are HTTP 200 with a negative `TYPE_RESULT` and `ERROR.MESSAGE`; children are
   the `kids/<id>` entries of `DATA.MENUS` in the sign-in answer.
-- **Bookings** (`src/agora/booking.js`) follow the rules of the portal's reservation calendar
-  (pck_calendar_comp): one line `{IdInscription, Day, IdDefTarif, IsMajored, DeleteBasketEvent}`
-  to `API_CALENDAR_COMPONENT/booking/`, never retried; a day the calendar would not let a parent
-  book or cancel is refused before anything is sent; a penalty is never accepted on the
-  parent's behalf; a basket to pay online is emptied (`IdDefTarif -1, DeleteBasketEvent 0`).
 - **Data requests not captured yet have `path: null`**: the client signs in, then throws
   `UNMAPPED` naming the step. Never invent a path: capture it ("Copy as cURL" in the browser).
   Tests give them `InternalApi/TEST/<name>` through `useTestPaths()` (test/helpers/fakePortal.js).

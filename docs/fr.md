@@ -13,8 +13,8 @@ vous donne dans Gladys :
   dernier message ;
 - des **déclencheurs de scène** (nouvelle facture, facture bientôt à
   échéance, nouveau message, réservation acceptée ou refusée) ;
-- des **actions de scène** (déclarer une absence, réserver un repas, vérifier
-  une journée, relire le portail) ;
+- des **actions de scène** de lecture (vérifier une journée, relire le
+  portail) ;
 - un **widget** de tableau de bord.
 
 ## Avant de commencer
@@ -96,23 +96,13 @@ redémarrage (l'intégration garde la dernière lecture dans `/data`).
 
 ### Actions
 
-| Action                              | Ce qu'elle fait                                                                                              | Sorties                                                    |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------- |
-| **Lire le portail famille**         | Relit le portail tout de suite.                                                                              | `success`, `balance`, `unpaid_invoices`, `unread_messages` |
-| **Vérifier la journée d'un enfant** | Dit si l'enfant est réservé ce jour-là (0 = aujourd'hui, 1 = demain…) et pour quoi.                          | `has_meal`, `booked_count`, `activities`, `date`           |
-| **Déclarer l'absence d'un enfant**  | Demande l'annulation des activités réservées d'une journée. Activité vide = toutes ; « cantine » = le repas. | `requested_count`, `activities`, `date`                    |
-| **Réserver une journée**            | Demande une journée d'une activité à laquelle l'enfant est inscrit (la cantine par défaut).                  | `requested`, `already_booked`, `activity`, `date`          |
+| Action                              | Ce qu'elle fait                                                                     | Sorties                                                    |
+| ----------------------------------- | ----------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| **Lire le portail famille**         | Relit le portail tout de suite.                                                     | `success`, `balance`, `unpaid_invoices`, `unread_messages` |
+| **Vérifier la journée d'un enfant** | Dit si l'enfant est réservé ce jour-là (0 = aujourd'hui, 1 = demain…) et pour quoi. | `has_meal`, `booked_count`, `activities`, `date`           |
 
-Les demandes passent par le portail : c'est la commune qui les valide, selon
-ses délais. Le déclencheur « une réservation change » vous prévient de sa
-réponse.
-
-L'intégration applique les mêmes règles que le calendrier du portail, et
-refuse avec la raison ce que le portail ne laisserait pas faire : un jour
-passé, des réservations fermées, une activité complète, un jour avec
-plusieurs tarifs à choisir, une annulation qui coûte une majoration. Une
-réservation qui se paie en ligne est retirée du panier aussitôt : faites-la
-sur le portail.
+L'intégration ne fait que **lire** le portail : elle ne réserve ni n'annule
+jamais rien. Les réservations et les absences se font sur le portail.
 
 ### Exemples
 
@@ -123,7 +113,6 @@ sur le portail.
   {{triggerEvent.data.amount}} € à payer avant le
   {{triggerEvent.data.due_date}} ».
 - **Une réservation change**, filtré sur l'état _Refusé_ → notification.
-- Un bouton « Enfant malade » → _Déclarer l'absence_ pour aujourd'hui.
 
 ## Le widget
 
@@ -136,7 +125,7 @@ Le widget **Agora Famille** du tableau de bord montre :
 - l'heure de la dernière lecture, ou l'erreur en cours.
 
 Et deux boutons : **Actualiser** et **Ouvrir le portail**. Les absences et
-les réservations se font par les actions de scène, ou sur le portail.
+les réservations se font sur le portail.
 
 ## Dépannage
 

@@ -22,8 +22,6 @@ const STEPS = {
   planning: { en: 'planning', fr: 'planning', de: 'Planung', es: 'planificación' },
   invoices: { en: 'invoices', fr: 'factures', de: 'Rechnungen', es: 'facturas' },
   messages: { en: 'messages', fr: 'messages', de: 'Nachrichten', es: 'mensajes' },
-  reserve: { en: 'booking', fr: 'réservation', de: 'Buchung', es: 'reserva' },
-  absence: { en: 'absence', fr: 'absence', de: 'Abwesenheit', es: 'ausencia' },
 };
 
 /**
@@ -94,23 +92,6 @@ export function describeError(error) {
             de: 'liest, ist noch nicht bekannt: siehe die Dokumentation.',
             es: 'aún no se conoce: vea la documentación.',
           }),
-      );
-    case ERROR_CODES.REFUSED:
-      return localize(
-        (language) =>
-          pick(language, {
-            en: 'The portal declined the request',
-            fr: 'Le portail a refusé la demande',
-            de: 'Das Portal hat die Anfrage abgelehnt',
-            es: 'El portal rechazó la solicitud',
-          }) +
-          `${where(language)}` +
-          (error.reason
-            ? ` : ${pick(language, error.reason)}`
-            : error.message
-              ? ` : ${error.message}`
-              : '') +
-          '.',
       );
     default:
       return localize(
@@ -184,8 +165,27 @@ export const NOTHING_PLANNED = {
 export const TODAY = { en: 'Today', fr: "Aujourd'hui", de: 'Heute', es: 'Hoy' };
 export const TOMORROW = { en: 'Tomorrow', fr: 'Demain', de: 'Morgen', es: 'Mañana' };
 
-/** An amount in euros, the way the reader writes it: 45.20 € / 45,20 €. */
+/**
+ * An amount, the reader's way, with at least two decimals and never rounded:
+ * 64,80 / 64.80, and 12,345 stays 12,345 — the amount is the portal's, to
+ * the last decimal it gives.
+ */
+export function formatAmount(amount, language) {
+  const locale = { en: 'en-IE', fr: 'fr-FR', de: 'de-DE', es: 'es-ES' }[language] ?? 'en-IE';
+  return new Intl.NumberFormat(locale, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 9,
+    useGrouping: false,
+  }).format(amount);
+}
+
+/** An amount in euros, the reader's way: 45,20 € / €45.20, never rounded. */
 export function formatEuros(amount, language) {
   const locale = { en: 'en-IE', fr: 'fr-FR', de: 'de-DE', es: 'es-ES' }[language] ?? 'en-IE';
-  return new Intl.NumberFormat(locale, { style: 'currency', currency: 'EUR' }).format(amount);
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 9,
+  }).format(amount);
 }

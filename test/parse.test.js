@@ -115,7 +115,9 @@ test('amounts are read the French way and the English way', () => {
   assert.equal(parseAmount('1 234,50'), 1234.5);
   assert.equal(parseAmount('1.234,50 EUR'), 1234.5);
   assert.equal(parseAmount('12.5'), 12.5);
-  assert.equal(parseAmount(7.005), 7.01);
+  // Never rounded: the amount is the portal's, to its last decimal.
+  assert.equal(parseAmount(7.005), 7.005);
+  assert.equal(parseAmount('12,345'), 12.345);
   assert.equal(parseAmount('n/a'), null);
   assert.equal(parseAmount(null), null);
 });
@@ -201,25 +203,6 @@ test('the planning of the API (DATA.EVENTS) is read', async () => {
     activity: 'Accueil De Loisirs Vacances - Élémentaire',
     activityId: '1481',
     status: RESERVATION_STATUS.REGISTERED,
-    refs: {
-      ID_EVENT: 1481,
-      ID_INSCRIPTION: 500001,
-      ID_CALENDAR: 9937,
-      ID_TARGET: '1001$0',
-      ID_GROUP: 99,
-      IS_SELECTED: 0,
-      IS_UNAVAILABLE: 0,
-      IS_MAJORED: 0,
-      IS_BASKET: 1,
-      AVAILABLE_SLOT: 0,
-      ACT_BLOCK_BY_CRITERIA: 0,
-      PRESENCE_TYPE: 0,
-      CAN_SUBSCRIPTION: 0,
-      CAN_UNSUBSCRIPTION: 0,
-      INSERT_ABSENCE: 0,
-      // SUB_EVENT_LIST without its placeholder (ID -1).
-      SUB_EVENTS: [1442],
-    },
   });
   const booked = planning.find((entry) => entry.day === '2026-10-27');
   assert.equal(booked.childId, '1002');

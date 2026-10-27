@@ -27,7 +27,7 @@ On top of the devices (`src/capabilities/`):
 | Capability                  | Keys                                                                                |
 | --------------------------- | ----------------------------------------------------------------------------------- |
 | Scene triggers              | `invoice_issued`, `invoice_due_soon`, `message_received`, `reservation_changed`     |
-| Scene actions               | `refresh`, `check_day`, `declare_absence`, `request_reservation`                    |
+| Scene actions (read-only)   | `refresh`, `check_day`                                                              |
 | Dashboard widget            | `family`: balance, children today/tomorrow, invoices to pay, last 3 unread messages |
 | Configuration screen action | `test_connection`                                                                   |
 

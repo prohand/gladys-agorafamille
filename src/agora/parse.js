@@ -7,7 +7,7 @@
 // list at the root or under `data`, a date as `05/11/2026` or as an ISO string.
 // So every reader is tolerant: it looks for each value under the names it is
 // known by, and drops an entry it cannot read instead of guessing. A wrong
-// guess is worse than a missing entry: it books the wrong lunch, or announces
+// guess is worse than a missing entry: it shows the wrong lunch, or announces
 // an invoice that does not exist.
 //
 // Adding a spelling a portal uses is a one-word change in the lists below.
@@ -226,12 +226,7 @@ export function parsePlanning(payload, children = []) {
       continue;
     }
     seen.add(key);
-    const planned = { childId, day, activity, activityId, status };
-    const refs = referencesOf(entry);
-    if (refs) {
-      planned.refs = refs;
-    }
-    entries.push(planned);
+    entries.push({ childId, day, activity, activityId, status });
   }
   return entries.sort((a, b) => a.day.localeCompare(b.day) || a.activity.localeCompare(b.activity));
 }
@@ -247,7 +242,7 @@ function childOf(value) {
  * is booked when it is selected (`IS_SELECTED: 1`), otherwise the child is
  * registered for the activity and the day is not booked. What the other flags
  * say (`IS_UNAVAILABLE`, `PRESENCE_TYPE`, an absence) is not known yet: they
- * are kept in `refs`, never guessed.
+ * are not read: never guessed.
  */
 function selectionOf(entry) {
   const selected = get(entry, 'IS_SELECTED');
@@ -255,50 +250,6 @@ function selectionOf(entry) {
     return null;
   }
   return toBoolean(selected) ? RESERVATION_STATUS.RESERVED : RESERVATION_STATUS.REGISTERED;
-}
-
-/** The ids of the API a booking or an absence request will need, as they came. */
-const REFERENCE_FIELDS = [
-  'ID_EVENT',
-  'ID_INSCRIPTION',
-  'ID_CALENDAR',
-  'ID_TARGET',
-  'ID_GROUP',
-  'IS_SELECTED',
-  'IS_UNAVAILABLE',
-  'IS_MAJORED',
-  'IS_BASKET',
-  'AVAILABLE_SLOT',
-  'ACT_BLOCK_BY_CRITERIA',
-  'PRESENCE_TYPE',
-  'PRESENCE_VALUE',
-];
-
-function referencesOf(entry) {
-  const refs = {};
-  for (const name of REFERENCE_FIELDS) {
-    const value = get(entry, name);
-    if (value !== undefined && value !== null && typeof value !== 'object') {
-      refs[name] = value;
-    }
-  }
-  const rules = get(entry, 'DAILY_ROULES_OBJ');
-  for (const name of ['CAN_SUBSCRIPTION', 'CAN_UNSUBSCRIPTION', 'INSERT_ABSENCE']) {
-    const value = get(rules, name);
-    if (value !== undefined && value !== null && typeof value !== 'object') {
-      refs[name] = value;
-    }
-  }
-  // The rates a booking can name: the calendar drops the first entry of
-  // SUB_EVENT_LIST (a placeholder, ID -1) and books the only one left.
-  const subEvents = get(entry, 'SUB_EVENT_LIST');
-  if (Array.isArray(subEvents)) {
-    refs.SUB_EVENTS = subEvents
-      .slice(1)
-      .map((subEvent) => get(subEvent, 'ID_SUB_EVENT'))
-      .filter((id) => id !== undefined && id !== null);
-  }
-  return Object.keys(refs).length > 0 ? refs : null;
 }
 
 /**
@@ -375,7 +326,7 @@ export function parseInvoices(payload) {
     const paidAmount = parseAmount(first(entry, FIELDS.paidAmount));
     const remainingValue =
       parseAmount(first(entry, FIELDS.remaining)) ??
-      (paidAmount === null ? null : Math.round((amount - paidAmount) * 100) / 100);
+      (paidAmount === null ? null : exact(amount - paidAmount));
     const remaining = remainingValue ?? (paid ? 0 : amount);
     invoices.push({
       id,
@@ -433,11 +384,11 @@ export function parseMessages(payload) {
 /**
  * An amount in euros: `45.2`, `"45,20"`, `"45,20 €"`, `"1 234,50"`, `"-12.00"`.
  *
- * @returns {number|null} rounded to the cent
+ * @returns {number|null} as the portal wrote it, never rounded
  */
 export function parseAmount(value) {
   if (typeof value === 'number') {
-    return Number.isFinite(value) ? Math.round(value * 100) / 100 : null;
+    return Number.isFinite(value) ? value : null;
   }
   if (typeof value !== 'string') {
     return null;
@@ -451,7 +402,16 @@ export function parseAmount(value) {
   if (!/^-?\d+(\.\d+)?$/.test(cleaned)) {
     return null;
   }
-  return Math.round(Number(cleaned) * 100) / 100;
+  return Number(cleaned);
+}
+
+/**
+ * The result of a sum or a difference of amounts, without the noise of
+ * binary floats (0.1 + 0.2 = 0.30000000000000004). Not a rounding to the
+ * cent: an amount the portal gives with three decimals keeps them.
+ */
+export function exact(value) {
+  return Number(value.toFixed(9));
 }
 
 /**

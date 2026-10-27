@@ -154,60 +154,6 @@ test('the planning is asked the way the portal pages ask it', async () => {
   assert.equal(frenchDate('2026-01-09'), '09/01/2026');
 });
 
-test('a booking the portal declines is reported as refused, with its words', async () => {
-  const portal = createFakePortal();
-  const client = clientFor(portal);
-  const original = portal.fetch;
-  let bookings = 0;
-  client.fetch = async (url, options) => {
-    if (String(url).includes(ENDPOINTS.absence.path)) {
-      bookings += 1;
-      return new Response(
-        JSON.stringify({
-          DATA: null,
-          ERROR: { ID: '3', MESSAGE: 'Délai dépassé' },
-          TYPE_RESULT: -1,
-        }),
-        { headers: { 'content-type': 'application/json' } },
-      );
-    }
-    return original(url, options);
-  };
-  const line = {
-    IdInscription: 1,
-    Day: '05/11/2026',
-    IdDefTarif: -1,
-    IsMajored: false,
-    DeleteBasketEvent: -1,
-  };
-  await assert.rejects(client.book(line, 'absence'), {
-    code: ERROR_CODES.REFUSED,
-    portalMessage: 'Délai dépassé',
-  });
-  // Never retried: a booking sent twice is two bookings.
-  assert.equal(bookings, 1);
-});
-
-test("the booking request is the calendar page's", async () => {
-  const portal = createFakePortal();
-  const client = clientFor(portal);
-  const line = {
-    IdInscription: 7,
-    Day: '05/11/2026',
-    IdDefTarif: 3001,
-    IsMajored: false,
-    DeleteBasketEvent: -1,
-  };
-  await client.book(line, 'reserve');
-  const request = portal.requests.at(-1);
-  assert.equal(
-    request.url,
-    `${BASE}/InternalApi/API_CALENDAR_COMPONENT/booking/?idContext=1&lang=fr`,
-  );
-  assert.equal(request.method, 'POST');
-  assert.deepEqual(JSON.parse(request.body), [line]);
-});
-
 test("the children are the calendar's targets", async () => {
   const portal = createFakePortal();
   const client = clientFor(portal);

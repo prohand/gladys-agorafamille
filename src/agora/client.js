@@ -35,7 +35,6 @@ export const ERROR_CODES = {
   NETWORK: 'network', // no answer (DNS, timeout, connection refused)
   HTTP: 'http', // an answer, but an error status
   FORMAT: 'format', // an answer the integration cannot read
-  REFUSED: 'refused', // a reservation or absence request the portal declined
   UNMAPPED: 'unmapped', // a request of the portal not captured yet (endpoints.js)
 };
 
@@ -53,8 +52,6 @@ export class AgoraError extends Error {
     this.step = details.step ?? null;
     // What the portal itself said, when it said something (ERROR.MESSAGE).
     this.portalMessage = details.portalMessage ?? null;
-    // Why a booking was not even sent, `{ en, fr, de, es }` (booking.js).
-    this.reason = details.reason ?? null;
   }
 }
 
@@ -313,35 +310,6 @@ export class AgoraClient {
   }
 
   /**
-   * Send one booking line (src/agora/booking.js builds it) to the calendar's
-   * booking request. Resolves the `outputInfo` of the answer (BookingInfo,
-   * ProviderInfo) once the portal accepted it. Never retried: a booking
-   * sent twice is two bookings.
-   *
-   * @param {object} line `{ IdInscription, Day, IdDefTarif, IsMajored, DeleteBasketEvent }`
-   * @param {'reserve'|'absence'} step
-   */
-  async book(line, step) {
-    const endpoint = ENDPOINTS[step];
-    const answer = await this.call(endpoint, {
-      query: endpoint.params,
-      body: JSON.stringify([line]),
-      contentType: 'application/json',
-      step,
-    });
-    if (isFailure(answer)) {
-      const portalMessage = this.mask(failureMessage(answer) ?? '') || null;
-      logger.warn(`"${step}" refused by the portal: ${this.mask(describeStatus(answer))}`);
-      throw new AgoraError(ERROR_CODES.REFUSED, portalMessage ?? 'Request declined', {
-        step,
-        portalMessage,
-      });
-    }
-    const data = field(answer, 'data');
-    return (data && typeof data === 'object' ? field(data, 'outputinfo') : null) ?? {};
-  }
-
-  /**
    * One JSON request, signed in first if needed, signed in again once if the
    * session expired on the way.
    */
@@ -425,8 +393,7 @@ export class AgoraClient {
     // The API answers its errors with HTTP 200 and a negative TYPE_RESULT
     // (an expired session among them). Read as data, such an answer was an
     // empty planning: "nothing booked" shown for every child. A read is
-    // tried again once with a fresh session; a request (a booking) is not,
-    // its refusal is the caller's to report.
+    // tried again once with a fresh session.
     if (endpoint.method === 'GET' || options.read) {
       const raw = field(answer, 'type_result');
       const typeResult = Number(raw);

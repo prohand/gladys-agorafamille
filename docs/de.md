@@ -14,8 +14,7 @@ und bietet dir in Gladys:
   letzte Nachricht;
 - **Szenen-Auslöser** (neue Rechnung, Rechnung bald fällig, neue Nachricht,
   Buchung angenommen oder abgelehnt);
-- **Szenen-Aktionen** (Abwesenheit melden, ein Essen buchen, einen Tag
-  prüfen, das Portal erneut lesen);
+- lesende **Szenen-Aktionen** (einen Tag prüfen, das Portal erneut lesen);
 - ein **Dashboard-Widget**.
 
 ## Bevor du beginnst
@@ -96,21 +95,13 @@ behält das letzte Lesen in `/data`).
 
 ### Aktionen
 
-| Aktion                              | Was sie tut                                                                                                 | Ausgaben                                                   |
-| ----------------------------------- | ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| **Familienportal lesen**            | Liest das Portal sofort.                                                                                    | `success`, `balance`, `unpaid_invoices`, `unread_messages` |
-| **Tag eines Kindes prüfen**         | Ob das Kind an dem Tag gebucht ist (0 = heute, 1 = morgen…) und wofür.                                      | `has_meal`, `booked_count`, `activities`, `date`           |
-| **Abwesenheit eines Kindes melden** | Bittet um Stornierung der gebuchten Aktivitäten eines Tages. Leere Aktivität = alle; „Kantine“ = das Essen. | `requested_count`, `activities`, `date`                    |
-| **Einen Tag für ein Kind buchen**   | Fragt einen Tag einer Aktivität an, für die das Kind angemeldet ist (standardmäßig die Kantine).            | `requested`, `already_booked`, `activity`, `date`          |
+| Aktion                      | Was sie tut                                                            | Ausgaben                                                   |
+| --------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------- |
+| **Familienportal lesen**    | Liest das Portal sofort.                                               | `success`, `balance`, `unpaid_invoices`, `unread_messages` |
+| **Tag eines Kindes prüfen** | Ob das Kind an dem Tag gebucht ist (0 = heute, 1 = morgen…) und wofür. | `has_meal`, `booked_count`, `activities`, `date`           |
 
-Die Anfragen laufen über das Portal: Die Gemeinde bestätigt sie nach ihren
-eigenen Fristen. Der Auslöser „Eine Buchung ändert sich“ meldet ihre Antwort.
-
-Die Integration wendet die Regeln des Portalkalenders an und lehnt mit
-Begründung ab, was das Portal nicht erlauben würde: einen vergangenen Tag,
-geschlossene Buchungen, eine ausgebuchte Aktivität, einen Tag mit mehreren
-wählbaren Tarifen, eine Stornierung mit Aufschlag. Eine online zu bezahlende
-Buchung wird sofort aus dem Warenkorb genommen: im Portal buchen.
+Die Integration **liest** das Portal nur: Sie bucht und storniert nie etwas.
+Buchungen und Abwesenheiten werden im Portal erledigt.
 
 ### Beispiele
 
@@ -120,7 +111,6 @@ Buchung wird sofort aus dem Warenkorb genommen: im Portal buchen.
   {{triggerEvent.data.amount}} € bis {{triggerEvent.data.due_date}} zahlen“
   senden.
 - **Eine Buchung ändert sich**, gefiltert auf _Abgelehnt_ → Benachrichtigung.
-- Eine Taste „Kind krank“ → _Abwesenheit melden_ für heute.
 
 ## Das Widget
 
@@ -133,7 +123,7 @@ Das Dashboard-Widget **Agora Famille** zeigt:
 - die Uhrzeit des letzten Lesens oder den aktuellen Fehler.
 
 Und zwei Tasten: **Aktualisieren** und **Portal öffnen**. Abwesenheiten und
-Buchungen laufen über die Szenen-Aktionen oder das Portal.
+Buchungen werden im Portal erledigt.
 
 ## Fehlerbehebung
 

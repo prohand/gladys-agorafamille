@@ -95,3 +95,11 @@ test('a missing or broken state file is a fresh start', async (t) => {
   t.after(() => rm(directory, { recursive: true, force: true }));
   assert.deepEqual(await createStore(directory).load('x'), { snapshot: null, reminded: [] });
 });
+
+test('amounts keep their cents and are never rounded', async () => {
+  const { formatAmount, formatEuros } = await import('../src/messages.js');
+  assert.equal(formatAmount(64.8, 'fr'), '64,80');
+  assert.equal(formatAmount(64.795, 'fr'), '64,795');
+  assert.equal(formatAmount(1234.5, 'en'), '1234.50');
+  assert.match(formatEuros(12.345, 'fr'), /^12,345\s€$/);
+});

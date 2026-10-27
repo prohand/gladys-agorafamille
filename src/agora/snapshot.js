@@ -12,7 +12,7 @@
 // -----------------------------------------------------------------------------
 
 import { addDays, daysBetween } from './dates.js';
-import { EXPECTED_STATUSES, RESERVATION_STATUS, isMeal, reservationKey } from './parse.js';
+import { EXPECTED_STATUSES, RESERVATION_STATUS, exact, isMeal, reservationKey } from './parse.js';
 
 /** Keys of the manifest `scene_triggers`. Never renamed: scenes store them. */
 export const SCENE_TRIGGERS = {
@@ -55,10 +55,10 @@ export function unpaidInvoices(snapshot) {
     .sort((a, b) => (a.dueOn ?? '9999').localeCompare(b.dueOn ?? '9999'));
 }
 
-/** What the family owes, in euros, rounded to the cent. */
+/** What the family owes, in euros, to the last decimal the portal gives. */
 export function balanceOf(snapshot) {
   const total = unpaidInvoices(snapshot).reduce((sum, invoice) => sum + invoice.remaining, 0);
-  return Math.round(total * 100) / 100;
+  return exact(total);
 }
 
 export function unreadMessages(snapshot) {

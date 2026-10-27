@@ -117,87 +117,6 @@ test('the next read fires the scene triggers of what changed', async (t) => {
   assert.equal(changed.data.previous_status, 'reserved');
 });
 
-test('a scene declares an absence, and the read that follows fires nothing', async (t) => {
-  const { gladys, app, portal } = await start();
-  t.after(() => app.stop());
-
-  const lea = childIds(gladys, config, '101').device;
-  const before = gladys.fake.sceneEvents.length;
-  const ack = await gladys.fake.sceneAction(SCENE_ACTIONS.DECLARE_ABSENCE, {
-    child: lea,
-    day: 0,
-    activity: 'cantine',
-  });
-  assert.equal(ack.success, true, ack.error);
-  // One line to the calendar's booking request, as its page writes it.
-  assert.deepEqual(portal.submitted, [
-    {
-      kind: 'absence',
-      IdInscription: 1101,
-      Day: '04/11/2026',
-      IdDefTarif: -1,
-      IsMajored: false,
-      DeleteBasketEvent: -1,
-    },
-  ]);
-  assert.equal(gladys.fake.sceneEvents.length, before);
-});
-
-test('the read after a request keeps the other news', async (t) => {
-  const { gladys, app, portal } = await start();
-  t.after(() => app.stop());
-
-  // Meanwhile, the municipality issued an invoice.
-  portal.invoices.push({ numFacture: 'F12', libelle: 'Décembre', montant: 20 });
-  const ack = await gladys.fake.sceneAction(SCENE_ACTIONS.DECLARE_ABSENCE, {
-    child: childIds(gladys, config, '101').device,
-    day: 0,
-    activity: 'cantine',
-  });
-  assert.equal(ack.success, true, ack.error);
-  const keys = gladys.fake.sceneEvents.map((event) => event.key ?? event.trigger);
-  assert.deepEqual(keys, [SCENE_TRIGGERS.INVOICE_ISSUED]);
-  // The device shows the absence request: no canteen today any more.
-  assert.equal(
-    gladys.fake.lastState(childIds(gladys, config, '101').feature(CHILD_FEATURES.MEAL_TODAY)),
-    0,
-  );
-});
-
-test('a scene books a lunch on a registered day, and says when it already is', async (t) => {
-  const { gladys, app, portal } = await start();
-  t.after(() => app.stop());
-
-  const lea = childIds(gladys, config, '101').device;
-  const tom = childIds(gladys, config, '102').device;
-  const booked = await gladys.fake.sceneAction(SCENE_ACTIONS.REQUEST_RESERVATION, {
-    child: lea,
-    day: 1,
-  });
-  assert.equal(booked.success, true, booked.error);
-  // The day's only rate (3001) books it.
-  assert.deepEqual(portal.submitted, [
-    {
-      kind: 'reserve',
-      IdInscription: 1101,
-      Day: '05/11/2026',
-      IdDefTarif: 3001,
-      IsMajored: false,
-      DeleteBasketEvent: -1,
-    },
-  ]);
-
-  const already = await gladys.fake.sceneAction(SCENE_ACTIONS.REQUEST_RESERVATION, {
-    child: tom,
-    day: 1,
-  });
-  assert.equal(already.success, true);
-  const outputs = already.data.outputs ?? already.data;
-  assert.equal(outputs.requested, false);
-  assert.equal(outputs.already_booked, true);
-  assert.equal(portal.submitted.length, 1);
-});
-
 test('a scene checks a day', async (t) => {
   const { gladys, app } = await start();
   t.after(() => app.stop());
@@ -354,48 +273,6 @@ test('without menu nor children request, the children come from the planning', a
     gladys.fake.discoveredDevices.map((device) => device.name),
     ['Agora Famille', 'Enfant 101', 'Enfant 102'],
   );
-});
-
-test('a booking to pay online is undone, and the parent sent to the portal', async (t) => {
-  const portal = family();
-  const { gladys, app } = await start(portal);
-  t.after(() => app.stop());
-  portal.paymentUrl = 'https://paiement.example/xyz';
-  const ack = await gladys.fake.sceneAction(SCENE_ACTIONS.REQUEST_RESERVATION, {
-    child: childIds(gladys, config, '101').device,
-    day: 1,
-  });
-  assert.equal(ack.success, false);
-  assert.match(ack.error, /paid online/);
-  // Booked, then the basket emptied the way the portal's calendar does.
-  assert.deepEqual(
-    portal.submitted.map((entry) => [entry.kind, entry.IdDefTarif, entry.DeleteBasketEvent]),
-    [
-      ['reserve', 3001, -1],
-      ['basket', -1, 0],
-    ],
-  );
-});
-
-test('a cancellation with a penalty is never sent', async (t) => {
-  const portal = family();
-  portal.planning[0] = apiDay({
-    child: 101,
-    date: '04/11/2026',
-    eventId: 1,
-    selected: 1,
-    majored: 1,
-  });
-  const { gladys, app } = await start(portal);
-  t.after(() => app.stop());
-  const ack = await gladys.fake.sceneAction(SCENE_ACTIONS.DECLARE_ABSENCE, {
-    child: childIds(gladys, config, '101').device,
-    day: 0,
-    activity: 'cantine',
-  });
-  assert.equal(ack.success, false);
-  assert.match(ack.error, /penalty/);
-  assert.deepEqual(portal.submitted, []);
 });
 
 test('the widget is read-only, with the last three unread messages', async (t) => {
