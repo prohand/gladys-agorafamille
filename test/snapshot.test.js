@@ -1,0 +1,133 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { RESERVATION_STATUS } from '../src/agora/parse.js';
+import {
+  SCENE_TRIGGERS,
+  balanceOf,
+  buildSnapshot,
+  diffSnapshots,
+  hasMeal,
+} from '../src/agora/snapshot.js';
+
+const children = [{ id: '7', firstName: 'Léa', name: 'Léa' }];
+
+function snapshot(overrides = {}) {
+  return buildSnapshot({ today: '2026-11-04', children, ...overrides });
+}
+
+const invoice = (id, extra = {}) => ({
+  id,
+  label: `Facture ${id}`,
+  amount: 40,
+  remaining: 40,
+  issuedOn: '2026-11-01',
+  dueOn: '2026-11-30',
+  paid: false,
+  ...extra,
+});
+
+test('the first read fires nothing', () => {
+  const current = snapshot({
+    invoices: [invoice('F1', { dueOn: '2026-11-05' })],
+    messages: [{ id: 'M1', subject: 'Bonjour', read: false }],
+  });
+  const { events, reminded } = diffSnapshots(null, current, { dueReminderDays: 3 });
+  assert.deepEqual(events, []);
+  // The invoice already close to its due date is not announced later either.
+  assert.deepEqual(reminded, ['F1']);
+});
+
+test('a new unpaid invoice and a new message are events', () => {
+  const previous = snapshot({ invoices: [invoice('F1')], messages: [] });
+  const current = snapshot({
+    invoices: [invoice('F1'), invoice('F2'), invoice('F3', { paid: true, remaining: 0 })],
+    messages: [{ id: 'M1', subject: 'Grève', sender: 'Mairie', date: '2026-11-04', read: false }],
+  });
+  const { events } = diffSnapshots(previous, current, { dueReminderDays: 0 });
+  assert.deepEqual(events, [
+    {
+      key: SCENE_TRIGGERS.INVOICE_ISSUED,
+      data: { invoice_id: 'F2', label: 'Facture F2', amount: 40, due_date: '2026-11-30' },
+    },
+    {
+      key: SCENE_TRIGGERS.MESSAGE_RECEIVED,
+      data: { subject: 'Grève', sender: 'Mairie', date: '2026-11-04' },
+    },
+  ]);
+});
+
+test('a module appearing is not a flood of news', () => {
+  const previous = snapshot({ modules: { invoices: false } });
+  const current = snapshot({ invoices: [invoice('F1')] });
+  assert.deepEqual(diffSnapshots(previous, current, { dueReminderDays: 0 }).events, []);
+});
+
+test('an invoice due soon is reminded once', () => {
+  const previous = snapshot({ invoices: [invoice('F1', { dueOn: '2026-11-10' })] });
+  const current = snapshot({ invoices: [invoice('F1', { dueOn: '2026-11-06' })] });
+
+  const first = diffSnapshots(previous, current, { dueReminderDays: 3 });
+  assert.deepEqual(first.events, [
+    {
+      key: SCENE_TRIGGERS.INVOICE_DUE_SOON,
+      data: {
+        invoice_id: 'F1',
+        label: 'Facture F1',
+        amount: 40,
+        due_date: '2026-11-06',
+        days_left: 2,
+      },
+    },
+  ]);
+  const second = diffSnapshots(current, current, { dueReminderDays: 3, reminded: first.reminded });
+  assert.deepEqual(second.events, []);
+
+  // Paid: forgotten, so a re-opened invoice would be reminded again.
+  const paid = snapshot({ invoices: [invoice('F1', { paid: true, remaining: 0 })] });
+  assert.deepEqual(
+    diffSnapshots(current, paid, { dueReminderDays: 3, reminded: first.reminded }).reminded,
+    [],
+  );
+});
+
+test('a day changing state is an event, a day entering the window is not', () => {
+  const day = (status, date = '2026-11-05') => ({
+    childId: '7',
+    day: date,
+    activity: 'Cantine',
+    activityId: 'C',
+    status,
+  });
+  const previous = snapshot({ planning: [day(RESERVATION_STATUS.REQUESTED)] });
+  const current = snapshot({
+    planning: [day(RESERVATION_STATUS.REFUSED), day(RESERVATION_STATUS.RESERVED, '2026-11-18')],
+  });
+  const { events } = diffSnapshots(previous, current, { dueReminderDays: 0 });
+  assert.deepEqual(events, [
+    {
+      key: SCENE_TRIGGERS.RESERVATION_CHANGED,
+      childId: '7',
+      data: {
+        child_name: 'Léa',
+        activity: 'Cantine',
+        date: '2026-11-05',
+        status: RESERVATION_STATUS.REFUSED,
+        previous_status: RESERVATION_STATUS.REQUESTED,
+        meal: true,
+      },
+    },
+  ]);
+});
+
+test('balance and canteen are computed from the read', () => {
+  const current = snapshot({
+    invoices: [invoice('F1'), invoice('F2', { remaining: 2.35 }), invoice('F3', { paid: true })],
+    planning: [
+      { childId: '7', day: '2026-11-04', activity: 'Cantine', activityId: 'C', status: 'reserved' },
+      { childId: '7', day: '2026-11-05', activity: 'Cantine', activityId: 'C', status: 'absent' },
+    ],
+  });
+  assert.equal(balanceOf(current), 42.35);
+  assert.equal(hasMeal(current, '7', '2026-11-04'), true);
+  assert.equal(hasMeal(current, '7', '2026-11-05'), false);
+});

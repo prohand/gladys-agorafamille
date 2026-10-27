@@ -1,0 +1,377 @@
+// -----------------------------------------------------------------------------
+// What the portal answers, turned into the few shapes the integration uses.
+//
+// Agora Famille publishes no API contract: the answers below are those of the
+// portal's own web pages, and they differ from one municipality (and one
+// version of the portal) to the next — `prenom` here, `firstName` there, a
+// list at the root or under `data`, a date as `05/11/2026` or as an ISO string.
+// So every reader is tolerant: it looks for each value under the names it is
+// known by, and drops an entry it cannot read instead of guessing. A wrong
+// guess is worse than a missing entry: it books the wrong lunch, or announces
+// an invoice that does not exist.
+//
+// Adding a spelling a portal uses is a one-word change in the lists below.
+// -----------------------------------------------------------------------------
+
+import { parseDay } from './dates.js';
+
+/** The reservation states of a day of activity, as the integration names them. */
+export const RESERVATION_STATUS = {
+  /** Registered for the activity over the period, but this day is not booked. */
+  REGISTERED: 'registered',
+  /** The family asked for the day; the municipality has not answered yet. */
+  REQUESTED: 'requested',
+  /** The child is expected: booked and accepted. */
+  RESERVED: 'reserved',
+  /** The family asked to cancel the day; not answered yet. */
+  ABSENCE_REQUESTED: 'absence_requested',
+  /** The day is cancelled. */
+  ABSENT: 'absent',
+  /** The municipality refused the request. */
+  REFUSED: 'refused',
+};
+
+/** The states in which the child is expected at the activity. */
+export const EXPECTED_STATUSES = [RESERVATION_STATUS.RESERVED, RESERVATION_STATUS.REQUESTED];
+
+const LIST_KEYS = ['data', 'result', 'results', 'items', 'liste', 'list', 'rows', 'content'];
+
+const CHILD_LIST_KEYS = ['enfants', 'children', 'lstEnfants', 'listeEnfants', 'membres'];
+const PLANNING_LIST_KEYS = ['planning', 'reservations', 'presences', 'jours', 'events'];
+const INVOICE_LIST_KEYS = ['factures', 'invoices', 'lstFactures', 'listeFactures'];
+const MESSAGE_LIST_KEYS = ['messages', 'notifications', 'lstMessages', 'listeMessages'];
+
+const FIELDS = {
+  childId: ['idEnfant', 'id_enfant', 'childId', 'child_id', 'idPersonne', 'id', 'code', 'num'],
+  firstName: ['prenom', 'firstName', 'first_name', 'firstname', 'prenomEnfant'],
+  lastName: ['nom', 'lastName', 'last_name', 'lastname', 'nomEnfant'],
+  planningChild: ['idEnfant', 'id_enfant', 'childId', 'child_id', 'idPersonne', 'enfant.id'],
+  planningChildName: ['prenomEnfant', 'prenom', 'enfant.prenom', 'childName'],
+  day: ['date', 'jour', 'dateJour', 'date_jour', 'day', 'datePresence', 'start'],
+  activity: [
+    'libelleActivite',
+    'libelle_activite',
+    'activite',
+    'activity',
+    'libelle',
+    'label',
+    'nomActivite',
+    'activite.libelle',
+    'title',
+  ],
+  activityId: [
+    'idActivite',
+    'id_activite',
+    'activityId',
+    'activity_id',
+    'codeActivite',
+    'code_activite',
+    'idPrestation',
+    'activite.id',
+  ],
+  status: ['etat', 'statut', 'status', 'state', 'libelleEtat', 'codeEtat', 'etat.libelle'],
+  invoiceId: ['idFacture', 'id_facture', 'numFacture', 'numeroFacture', 'numero', 'number', 'id'],
+  invoiceLabel: ['libelle', 'label', 'objet', 'periode', 'designation', 'regie'],
+  amount: ['montantTTC', 'montant', 'amount', 'total', 'montantTotal', 'montant_total'],
+  remaining: [
+    'resteAPayer',
+    'reste_a_payer',
+    'montantRestant',
+    'montant_restant',
+    'restant',
+    'remaining',
+    'solde',
+  ],
+  issuedOn: ['dateEmission', 'date_emission', 'dateFacture', 'date_facture', 'issuedOn', 'date'],
+  dueOn: ['dateEcheance', 'date_echeance', 'echeance', 'dateLimite', 'dueDate', 'dueOn'],
+  paid: ['payee', 'estPayee', 'paid', 'isPaid', 'reglee', 'soldee'],
+  invoiceStatus: ['etat', 'statut', 'status', 'state'],
+  messageId: ['idMessage', 'id_message', 'idNotification', 'id'],
+  subject: ['objet', 'sujet', 'subject', 'titre', 'title', 'libelle'],
+  sender: ['expediteur', 'auteur', 'emetteur', 'from', 'sender', 'service'],
+  messageDate: ['dateEnvoi', 'date_envoi', 'dateCreation', 'date', 'sentAt', 'createdAt'],
+  read: ['lu', 'estLu', 'read', 'isRead', 'luLe'],
+};
+
+/**
+ * The children of the family.
+ *
+ * @returns {Array<{id: string, firstName: string, lastName: string, name: string}>}
+ */
+export function parseChildren(payload) {
+  const children = [];
+  const seen = new Set();
+  for (const entry of listOf(payload, CHILD_LIST_KEYS)) {
+    const id = text(first(entry, FIELDS.childId));
+    const firstName = text(first(entry, FIELDS.firstName));
+    const lastName = text(first(entry, FIELDS.lastName));
+    if (!id || !firstName || seen.has(id)) {
+      continue;
+    }
+    seen.add(id);
+    children.push({ id, firstName, lastName, name: firstName });
+  }
+  // Two children with the same first name (a blended family) are told apart by
+  // their last name, the way the portal itself shows them.
+  for (const child of children) {
+    const twins = children.filter((other) => other.firstName === child.firstName);
+    if (twins.length > 1 && child.lastName) {
+      child.name = `${child.firstName} ${child.lastName}`;
+    }
+  }
+  return children;
+}
+
+/**
+ * The booked or bookable days of the children.
+ *
+ * @param {unknown} payload the planning answer
+ * @param {Array<{id: string, firstName: string}>} children to attach a day
+ *   given by first name only to its child
+ * @returns {Array<{childId: string, day: string, activity: string, activityId: string, status: string}>}
+ */
+export function parsePlanning(payload, children = []) {
+  const entries = [];
+  const seen = new Set();
+  for (const entry of listOf(payload, PLANNING_LIST_KEYS)) {
+    let childId = text(first(entry, FIELDS.planningChild));
+    if (!childId) {
+      const name = text(first(entry, FIELDS.planningChildName));
+      childId = children.find((child) => child.firstName === name)?.id ?? null;
+    }
+    const day = parseDay(first(entry, FIELDS.day));
+    const activity = text(first(entry, FIELDS.activity));
+    const status = parseReservationStatus(first(entry, FIELDS.status));
+    if (!childId || !day || !activity || !status) {
+      continue;
+    }
+    const activityId = text(first(entry, FIELDS.activityId)) ?? slug(activity);
+    const key = reservationKey({ childId, day, activityId });
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    entries.push({ childId, day, activity, activityId, status });
+  }
+  return entries.sort((a, b) => a.day.localeCompare(b.day) || a.activity.localeCompare(b.activity));
+}
+
+/**
+ * Whether an activity is a school meal: "Cantine", "Restauration scolaire",
+ * "Repas midi", "Pause méridienne"… The label is the municipality's own, so
+ * this is a list of words, not a code.
+ */
+export function isMeal(activity) {
+  return /cantine|repas|restaura|dejeuner|meridien|midi|lunch/.test(normalize(activity ?? ''));
+}
+
+/** The identity of a reservation: one child, one day, one activity. */
+export function reservationKey({ childId, day, activityId }) {
+  return `${childId}|${day}|${activityId}`;
+}
+
+/**
+ * A reservation state, from the label or code the portal shows.
+ *
+ * The order of the tests matters: "demande d'absence" is an absence request,
+ * not a reservation request, and "non réservé" is not reserved.
+ *
+ * @returns {string|null} a value of RESERVATION_STATUS
+ */
+export function parseReservationStatus(value) {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+  const code = String(value).trim().toLowerCase();
+  if (Object.values(RESERVATION_STATUS).includes(code)) {
+    return code;
+  }
+  const raw = normalize(value);
+  if (/refus|rejet|reject|denied/.test(raw)) {
+    return RESERVATION_STATUS.REFUSED;
+  }
+  if (/absen|annul|cancel/.test(raw)) {
+    return /demand|attente|request|pending/.test(raw)
+      ? RESERVATION_STATUS.ABSENCE_REQUESTED
+      : RESERVATION_STATUS.ABSENT;
+  }
+  if (/non reserv|not reserved|disponible|available|reservable/.test(raw)) {
+    return RESERVATION_STATUS.REGISTERED;
+  }
+  if (/demand|attente|en cours|request|pending/.test(raw)) {
+    return RESERVATION_STATUS.REQUESTED;
+  }
+  if (/reserv|valid|accept|confirm|present|participe|booked/.test(raw)) {
+    return RESERVATION_STATUS.RESERVED;
+  }
+  if (/inscri|registered|enrol/.test(raw)) {
+    return RESERVATION_STATUS.REGISTERED;
+  }
+  return null;
+}
+
+/**
+ * The invoices of the family.
+ *
+ * @returns {Array<{id: string, label: string, amount: number, remaining: number, issuedOn: ?string, dueOn: ?string, paid: boolean}>}
+ */
+export function parseInvoices(payload) {
+  const invoices = [];
+  const seen = new Set();
+  for (const entry of listOf(payload, INVOICE_LIST_KEYS)) {
+    const id = text(first(entry, FIELDS.invoiceId));
+    const amount = parseAmount(first(entry, FIELDS.amount));
+    if (!id || amount === null || seen.has(id)) {
+      continue;
+    }
+    seen.add(id);
+    const paid = parsePaid(entry);
+    const remainingValue = parseAmount(first(entry, FIELDS.remaining));
+    const remaining = remainingValue ?? (paid ? 0 : amount);
+    invoices.push({
+      id,
+      label: text(first(entry, FIELDS.invoiceLabel)) ?? id,
+      amount,
+      remaining: Math.max(0, remaining),
+      issuedOn: parseDay(first(entry, FIELDS.issuedOn)),
+      dueOn: parseDay(first(entry, FIELDS.dueOn)),
+      paid: paid || remaining <= 0,
+    });
+  }
+  return invoices.sort((a, b) => (b.issuedOn ?? '').localeCompare(a.issuedOn ?? ''));
+}
+
+function parsePaid(entry) {
+  const flag = first(entry, FIELDS.paid);
+  if (flag !== undefined && flag !== null && flag !== '') {
+    return toBoolean(flag);
+  }
+  const status = normalize(first(entry, FIELDS.invoiceStatus) ?? '');
+  if (/impay|non pay|a payer|unpaid|attente|due/.test(status)) {
+    return false;
+  }
+  return /pay|regl|sold|paid|acquit/.test(status);
+}
+
+/**
+ * The messages of the municipality to the family.
+ *
+ * @returns {Array<{id: string, subject: string, sender: ?string, date: ?string, read: boolean}>}
+ */
+export function parseMessages(payload) {
+  const messages = [];
+  const seen = new Set();
+  for (const entry of listOf(payload, MESSAGE_LIST_KEYS)) {
+    const id = text(first(entry, FIELDS.messageId));
+    const subject = text(first(entry, FIELDS.subject));
+    if (!id || !subject || seen.has(id)) {
+      continue;
+    }
+    seen.add(id);
+    const read = first(entry, FIELDS.read);
+    messages.push({
+      id,
+      subject,
+      sender: text(first(entry, FIELDS.sender)),
+      date: parseDay(first(entry, FIELDS.messageDate)),
+      read: read === undefined || read === null || read === '' ? false : toBoolean(read),
+    });
+  }
+  return messages.sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''));
+}
+
+/**
+ * An amount in euros: `45.2`, `"45,20"`, `"45,20 €"`, `"1 234,50"`, `"-12.00"`.
+ *
+ * @returns {number|null} rounded to the cent
+ */
+export function parseAmount(value) {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? Math.round(value * 100) / 100 : null;
+  }
+  if (typeof value !== 'string') {
+    return null;
+  }
+  // Thousands separators (spaces, narrow no-break spaces, dots before a comma)
+  // go, the decimal comma becomes a point.
+  let cleaned = value.replace(/[€\s\u00a0\u202f]|EUR/gi, '');
+  if (cleaned.includes(',')) {
+    cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+  }
+  if (!/^-?\d+(\.\d+)?$/.test(cleaned)) {
+    return null;
+  }
+  return Math.round(Number(cleaned) * 100) / 100;
+}
+
+/**
+ * The list of entries an answer carries: at the root, under one of the names
+ * the portal gives it, or one level down in a `data`/`result` envelope.
+ *
+ * @returns {Array<object>}
+ */
+export function listOf(payload, names, depth = 0) {
+  if (Array.isArray(payload)) {
+    return payload.filter((entry) => entry && typeof entry === 'object');
+  }
+  if (!payload || typeof payload !== 'object' || depth > 3) {
+    return [];
+  }
+  for (const name of [...names, ...LIST_KEYS]) {
+    if (payload[name] !== undefined) {
+      const found = listOf(payload[name], names, depth + 1);
+      if (found.length > 0) {
+        return found;
+      }
+    }
+  }
+  return [];
+}
+
+/** The first value found under one of the names (dotted names reach into objects). */
+function first(entry, names) {
+  for (const name of names) {
+    const value = name.split('.').reduce((node, part) => node?.[part], entry);
+    if (value !== undefined && value !== null && value !== '') {
+      return value;
+    }
+  }
+  return undefined;
+}
+
+function text(value) {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  if (typeof value === 'object') {
+    return null;
+  }
+  const result = String(value).trim();
+  return result || null;
+}
+
+function toBoolean(value) {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  if (typeof value === 'number') {
+    return value !== 0;
+  }
+  return ['1', 'true', 'yes', 'oui', 'o', 'y', 'vrai'].includes(normalize(value));
+}
+
+/** Lowercase, accent-free, single-spaced. */
+function normalize(value) {
+  return String(value)
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[_\s]+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function slug(value) {
+  return normalize(value)
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}

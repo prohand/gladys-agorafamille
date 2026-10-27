@@ -1,0 +1,791 @@
+{
+  "manifest_version": 1,
+  "type": "device",
+  "name": "Agora Famille",
+  "description": {
+    "en": "Canteen, after-school bookings, invoices and messages of the Agora Famille family portal.",
+    "fr": "Cantine, périscolaire, factures et messages du portail famille Agora Famille.",
+    "de": "Kantine, Nachmittagsbetreuung, Rechnungen und Nachrichten des Familienportals Agora Famille.",
+    "es": "Comedor, actividades extraescolares, facturas y mensajes del portal Agora Famille."
+  },
+  "version": "1.0.0",
+  "docker_image": "ghcr.io/prohand/gladys-agorafamille:1.0.0",
+  "gladys_version": ">=5.3.0",
+  "cover_image": "https://raw.githubusercontent.com/prohand/gladys-agorafamille/main/cover.png",
+  "categories": ["services", "notifications"],
+  "keywords": [
+    "agora plus",
+    "agoraplus",
+    "portail famille",
+    "cantine",
+    "périscolaire",
+    "restauration scolaire",
+    "accueil de loisirs",
+    "école",
+    "mairie"
+  ],
+  "countries": ["FR"],
+  "transports": ["cloud"],
+  "config_schema": [
+    {
+      "key": "intro",
+      "type": "section",
+      "label": {
+        "en": "Your family portal",
+        "fr": "Votre portail famille",
+        "de": "Dein Familienportal",
+        "es": "Su portal familiar"
+      },
+      "description": {
+        "en": "Use the address and the account you sign in with on your municipality's Agora Famille portal. The integration reads the portal like a browser would: nothing is shared with anyone else.",
+        "fr": "Utilisez l'adresse et le compte avec lesquels vous vous connectez au portail Agora Famille de votre commune. L'intégration lit le portail comme le ferait un navigateur : rien n'est transmis à personne d'autre.",
+        "de": "Verwende die Adresse und das Konto, mit denen du dich beim Agora-Famille-Portal deiner Gemeinde anmeldest. Die Integration liest das Portal wie ein Browser: Nichts wird an Dritte weitergegeben.",
+        "es": "Use la dirección y la cuenta con las que inicia sesión en el portal Agora Famille de su municipio. La integración lee el portal como lo haría un navegador: no se comparte nada con nadie más."
+      },
+      "links": [
+        {
+          "url": "https://github.com/prohand/gladys-agorafamille/blob/main/docs/fr.md",
+          "label": {
+            "en": "Integration documentation",
+            "fr": "Documentation de l'intégration",
+            "de": "Dokumentation der Integration",
+            "es": "Documentación de la integración"
+          }
+        }
+      ]
+    },
+    {
+      "key": "portal_url",
+      "type": "string",
+      "label": {
+        "en": "Portal address",
+        "fr": "Adresse du portail",
+        "de": "Portaladresse",
+        "es": "Dirección del portal"
+      },
+      "description": {
+        "en": "The address of your portal, as your browser shows it, or just the name of your municipality in it.",
+        "fr": "L'adresse de votre portail, telle que votre navigateur l'affiche, ou seulement le nom de votre commune qui y figure.",
+        "de": "Die Adresse deines Portals, wie dein Browser sie anzeigt, oder nur der Name deiner Gemeinde darin.",
+        "es": "La dirección de su portal, tal como la muestra su navegador, o solo el nombre de su municipio que aparece en ella."
+      },
+      "placeholder": {
+        "en": "e.g. https://portalssl.agoraplus.fr/mycity",
+        "fr": "ex. https://portalssl.agoraplus.fr/maville",
+        "de": "z. B. https://portalssl.agoraplus.fr/meinestadt",
+        "es": "p. ej. https://portalssl.agoraplus.fr/miciudad"
+      },
+      "required": true
+    },
+    {
+      "key": "username",
+      "type": "string",
+      "label": {
+        "en": "Login (e-mail)",
+        "fr": "Identifiant (e-mail)",
+        "de": "Benutzername (E-Mail)",
+        "es": "Usuario (correo)"
+      },
+      "placeholder": {
+        "en": "e.g. parent@example.com",
+        "fr": "ex. parent@exemple.fr",
+        "de": "z. B. eltern@beispiel.de",
+        "es": "p. ej. padres@ejemplo.es"
+      },
+      "required": true
+    },
+    {
+      "key": "password",
+      "type": "secret",
+      "label": {
+        "en": "Password",
+        "fr": "Mot de passe",
+        "de": "Passwort",
+        "es": "Contraseña"
+      },
+      "required": true
+    },
+    {
+      "key": "refresh_minutes",
+      "type": "number",
+      "label": {
+        "en": "Refresh interval (min)",
+        "fr": "Intervalle de lecture (min)",
+        "de": "Aktualisierungsintervall (min)",
+        "es": "Intervalo de lectura (min)"
+      },
+      "description": {
+        "en": "How often the portal is read, in minutes (15 minimum).",
+        "fr": "Fréquence de lecture du portail, en minutes (15 minimum).",
+        "de": "Wie oft das Portal gelesen wird, in Minuten (mindestens 15).",
+        "es": "Cada cuánto se lee el portal, en minutos (15 como mínimo)."
+      },
+      "required": false,
+      "default": 60,
+      "min": 15,
+      "max": 1440
+    },
+    {
+      "key": "days_ahead",
+      "type": "number",
+      "label": {
+        "en": "Days of planning watched",
+        "fr": "Jours de planning suivis",
+        "de": "Beobachtete Planungstage",
+        "es": "Días de planificación seguidos"
+      },
+      "description": {
+        "en": "How many days ahead the bookings are read and watched for changes.",
+        "fr": "Nombre de jours à venir dont les réservations sont lues et surveillées.",
+        "de": "Wie viele Tage im Voraus die Buchungen gelesen und auf Änderungen überwacht werden.",
+        "es": "Cuántos días por adelantado se leen y vigilan las reservas."
+      },
+      "required": false,
+      "default": 14,
+      "min": 1,
+      "max": 60
+    },
+    {
+      "key": "due_reminder_days",
+      "type": "number",
+      "label": {
+        "en": "Invoice reminder (days)",
+        "fr": "Rappel de facture (jours)",
+        "de": "Rechnungserinnerung (Tage)",
+        "es": "Aviso de factura (días)"
+      },
+      "description": {
+        "en": "The \"invoice due soon\" trigger fires this many days before the due date. 0 turns it off.",
+        "fr": "Le déclencheur « facture bientôt à échéance » se déclenche ce nombre de jours avant l'échéance. 0 le désactive.",
+        "de": "Der Auslöser „Rechnung bald fällig“ wird so viele Tage vor dem Fälligkeitsdatum ausgelöst. 0 schaltet ihn ab.",
+        "es": "El disparador «factura a punto de vencer» se activa estos días antes del vencimiento. 0 lo desactiva."
+      },
+      "required": false,
+      "default": 3,
+      "min": 0,
+      "max": 15
+    },
+    {
+      "key": "debug_logs",
+      "type": "boolean",
+      "label": {
+        "en": "Detailed logs",
+        "fr": "Logs détaillés",
+        "de": "Ausführliche Protokolle",
+        "es": "Registros detallados"
+      },
+      "description": {
+        "en": "Log every request to the portal (never the password). For troubleshooting.",
+        "fr": "Journalise chaque requête au portail (jamais le mot de passe). Pour le dépannage.",
+        "de": "Protokolliert jede Anfrage an das Portal (nie das Passwort). Zur Fehlersuche.",
+        "es": "Registra cada petición al portal (nunca la contraseña). Para diagnosticar."
+      },
+      "required": false,
+      "default": false
+    }
+  ],
+  "actions": [
+    {
+      "key": "test_connection",
+      "label": {
+        "en": "Test the connection",
+        "fr": "Tester la connexion",
+        "de": "Verbindung testen",
+        "es": "Probar la conexión"
+      },
+      "timeout_seconds": 60
+    }
+  ],
+  "scene_triggers": [
+    {
+      "key": "invoice_issued",
+      "label": {
+        "en": "A new invoice is issued",
+        "fr": "Une nouvelle facture est émise",
+        "de": "Eine neue Rechnung wird ausgestellt",
+        "es": "Se emite una nueva factura"
+      },
+      "description": {
+        "en": "The municipality issued an invoice that is waiting to be paid.",
+        "fr": "La commune a émis une facture en attente de paiement.",
+        "de": "Die Gemeinde hat eine Rechnung ausgestellt, die auf Zahlung wartet.",
+        "es": "El municipio emitió una factura pendiente de pago."
+      },
+      "variables": [
+        {
+          "key": "label",
+          "type": "string",
+          "label": { "en": "Invoice", "fr": "Facture", "de": "Rechnung", "es": "Factura" }
+        },
+        {
+          "key": "amount",
+          "type": "number",
+          "label": {
+            "en": "Amount (€)",
+            "fr": "Montant (€)",
+            "de": "Betrag (€)",
+            "es": "Importe (€)"
+          }
+        },
+        {
+          "key": "due_date",
+          "type": "string",
+          "label": {
+            "en": "Due date",
+            "fr": "Date d'échéance",
+            "de": "Fälligkeitsdatum",
+            "es": "Fecha de vencimiento"
+          }
+        },
+        {
+          "key": "invoice_id",
+          "type": "string",
+          "label": {
+            "en": "Invoice number",
+            "fr": "Numéro de facture",
+            "de": "Rechnungsnummer",
+            "es": "Número de factura"
+          }
+        }
+      ]
+    },
+    {
+      "key": "invoice_due_soon",
+      "label": {
+        "en": "An invoice is due soon",
+        "fr": "Une facture arrive à échéance",
+        "de": "Eine Rechnung wird bald fällig",
+        "es": "Una factura vence pronto"
+      },
+      "description": {
+        "en": "An unpaid invoice reaches its due date within the days set in the configuration. Once per invoice.",
+        "fr": "Une facture impayée arrive à échéance dans le nombre de jours réglé dans la configuration. Une fois par facture.",
+        "de": "Eine unbezahlte Rechnung wird innerhalb der in der Konfiguration festgelegten Tage fällig. Einmal pro Rechnung.",
+        "es": "Una factura impagada vence dentro de los días fijados en la configuración. Una vez por factura."
+      },
+      "variables": [
+        {
+          "key": "label",
+          "type": "string",
+          "label": { "en": "Invoice", "fr": "Facture", "de": "Rechnung", "es": "Factura" }
+        },
+        {
+          "key": "amount",
+          "type": "number",
+          "label": {
+            "en": "Left to pay (€)",
+            "fr": "Reste à payer (€)",
+            "de": "Offener Betrag (€)",
+            "es": "Pendiente (€)"
+          }
+        },
+        {
+          "key": "due_date",
+          "type": "string",
+          "label": {
+            "en": "Due date",
+            "fr": "Date d'échéance",
+            "de": "Fälligkeitsdatum",
+            "es": "Fecha de vencimiento"
+          }
+        },
+        {
+          "key": "days_left",
+          "type": "number",
+          "label": {
+            "en": "Days left",
+            "fr": "Jours restants",
+            "de": "Verbleibende Tage",
+            "es": "Días restantes"
+          }
+        },
+        {
+          "key": "invoice_id",
+          "type": "string",
+          "label": {
+            "en": "Invoice number",
+            "fr": "Numéro de facture",
+            "de": "Rechnungsnummer",
+            "es": "Número de factura"
+          }
+        }
+      ]
+    },
+    {
+      "key": "message_received",
+      "label": {
+        "en": "A message is received",
+        "fr": "Un message est reçu",
+        "de": "Eine Nachricht wird empfangen",
+        "es": "Se recibe un mensaje"
+      },
+      "description": {
+        "en": "The municipality sent a message or a notification on the portal.",
+        "fr": "La commune a envoyé un message ou une notification sur le portail.",
+        "de": "Die Gemeinde hat eine Nachricht oder Benachrichtigung im Portal gesendet.",
+        "es": "El municipio envió un mensaje o una notificación en el portal."
+      },
+      "variables": [
+        {
+          "key": "subject",
+          "type": "string",
+          "label": { "en": "Subject", "fr": "Objet", "de": "Betreff", "es": "Asunto" }
+        },
+        {
+          "key": "sender",
+          "type": "string",
+          "label": { "en": "Sender", "fr": "Expéditeur", "de": "Absender", "es": "Remitente" }
+        },
+        {
+          "key": "date",
+          "type": "string",
+          "label": { "en": "Date", "fr": "Date", "de": "Datum", "es": "Fecha" }
+        }
+      ]
+    },
+    {
+      "key": "reservation_changed",
+      "label": {
+        "en": "A booking changes",
+        "fr": "Une réservation change",
+        "de": "Eine Buchung ändert sich",
+        "es": "Una reserva cambia"
+      },
+      "description": {
+        "en": "A booked or requested day changed state: accepted, refused, cancelled…",
+        "fr": "Un jour réservé ou demandé a changé d'état : accepté, refusé, annulé…",
+        "de": "Ein gebuchter oder angefragter Tag hat seinen Status geändert: angenommen, abgelehnt, storniert…",
+        "es": "Un día reservado o solicitado cambió de estado: aceptado, rechazado, cancelado…"
+      },
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "Child", "fr": "Enfant", "de": "Kind", "es": "Niño" },
+          "required": false
+        },
+        {
+          "key": "status",
+          "type": "multi_select",
+          "label": {
+            "en": "New state",
+            "fr": "Nouvel état",
+            "de": "Neuer Status",
+            "es": "Nuevo estado"
+          },
+          "required": false,
+          "options": [
+            {
+              "value": "reserved",
+              "label": { "en": "Booked", "fr": "Réservé", "de": "Gebucht", "es": "Reservado" }
+            },
+            {
+              "value": "requested",
+              "label": { "en": "Requested", "fr": "Demandé", "de": "Angefragt", "es": "Solicitado" }
+            },
+            {
+              "value": "refused",
+              "label": { "en": "Refused", "fr": "Refusé", "de": "Abgelehnt", "es": "Rechazado" }
+            },
+            {
+              "value": "absence_requested",
+              "label": {
+                "en": "Absence requested",
+                "fr": "Absence demandée",
+                "de": "Abwesenheit angefragt",
+                "es": "Ausencia solicitada"
+              }
+            },
+            {
+              "value": "absent",
+              "label": { "en": "Absent", "fr": "Absent", "de": "Abwesend", "es": "Ausente" }
+            },
+            {
+              "value": "registered",
+              "label": {
+                "en": "Not booked",
+                "fr": "Non réservé",
+                "de": "Nicht gebucht",
+                "es": "Sin reservar"
+              }
+            }
+          ]
+        }
+      ],
+      "variables": [
+        {
+          "key": "child_name",
+          "type": "string",
+          "label": { "en": "Child", "fr": "Enfant", "de": "Kind", "es": "Niño" }
+        },
+        {
+          "key": "activity",
+          "type": "string",
+          "label": { "en": "Activity", "fr": "Activité", "de": "Aktivität", "es": "Actividad" }
+        },
+        {
+          "key": "date",
+          "type": "string",
+          "label": { "en": "Day", "fr": "Jour", "de": "Tag", "es": "Día" }
+        },
+        {
+          "key": "status",
+          "type": "string",
+          "label": {
+            "en": "New state",
+            "fr": "Nouvel état",
+            "de": "Neuer Status",
+            "es": "Nuevo estado"
+          }
+        },
+        {
+          "key": "previous_status",
+          "type": "string",
+          "label": {
+            "en": "Previous state",
+            "fr": "État précédent",
+            "de": "Vorheriger Status",
+            "es": "Estado anterior"
+          }
+        },
+        {
+          "key": "meal",
+          "type": "boolean",
+          "label": {
+            "en": "Canteen meal",
+            "fr": "Repas de cantine",
+            "de": "Kantinenessen",
+            "es": "Comida de comedor"
+          }
+        }
+      ]
+    }
+  ],
+  "scene_actions": [
+    {
+      "key": "refresh",
+      "label": {
+        "en": "Read the family portal",
+        "fr": "Lire le portail famille",
+        "de": "Familienportal lesen",
+        "es": "Leer el portal familiar"
+      },
+      "description": {
+        "en": "Read the portal now and return what is owed and what is unread.",
+        "fr": "Lit le portail maintenant et renvoie le montant dû et les messages non lus.",
+        "de": "Liest das Portal jetzt und gibt den offenen Betrag und die ungelesenen Nachrichten zurück.",
+        "es": "Lee el portal ahora y devuelve lo que se debe y lo que no se ha leído."
+      },
+      "timeout_seconds": 90,
+      "outputs": [
+        {
+          "key": "success",
+          "type": "boolean",
+          "label": {
+            "en": "Portal read",
+            "fr": "Portail lu",
+            "de": "Portal gelesen",
+            "es": "Portal leído"
+          }
+        },
+        {
+          "key": "balance",
+          "type": "number",
+          "label": {
+            "en": "Balance due (€)",
+            "fr": "Reste à payer (€)",
+            "de": "Offener Betrag (€)",
+            "es": "Saldo pendiente (€)"
+          }
+        },
+        {
+          "key": "unpaid_invoices",
+          "type": "number",
+          "label": {
+            "en": "Invoices to pay",
+            "fr": "Factures à payer",
+            "de": "Offene Rechnungen",
+            "es": "Facturas por pagar"
+          }
+        },
+        {
+          "key": "unread_messages",
+          "type": "number",
+          "label": {
+            "en": "Unread messages",
+            "fr": "Messages non lus",
+            "de": "Ungelesene Nachrichten",
+            "es": "Mensajes sin leer"
+          }
+        }
+      ]
+    },
+    {
+      "key": "check_day",
+      "label": {
+        "en": "Check a child's day",
+        "fr": "Vérifier la journée d'un enfant",
+        "de": "Tag eines Kindes prüfen",
+        "es": "Comprobar el día de un niño"
+      },
+      "description": {
+        "en": "Is the child booked on that day, and for what (canteen included).",
+        "fr": "L'enfant est-il réservé ce jour-là, et pour quoi (cantine comprise).",
+        "de": "Ist das Kind an diesem Tag gebucht, und wofür (Kantine inbegriffen).",
+        "es": "¿Está el niño reservado ese día, y para qué (comedor incluido)?"
+      },
+      "timeout_seconds": 90,
+      "fields": [
+        {
+          "key": "child",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "Child", "fr": "Enfant", "de": "Kind", "es": "Niño" },
+          "required": true
+        },
+        {
+          "key": "day",
+          "type": "number",
+          "label": {
+            "en": "Day (0 today, 1 tomorrow…)",
+            "fr": "Jour (0 aujourd'hui, 1 demain…)",
+            "de": "Tag (0 heute, 1 morgen…)",
+            "es": "Día (0 hoy, 1 mañana…)"
+          },
+          "required": false,
+          "default": 1,
+          "min": 0,
+          "max": 60
+        }
+      ],
+      "outputs": [
+        {
+          "key": "has_meal",
+          "type": "boolean",
+          "label": {
+            "en": "Eats at the canteen",
+            "fr": "Mange à la cantine",
+            "de": "Isst in der Kantine",
+            "es": "Come en el comedor"
+          }
+        },
+        {
+          "key": "booked_count",
+          "type": "number",
+          "label": {
+            "en": "Activities booked",
+            "fr": "Activités réservées",
+            "de": "Gebuchte Aktivitäten",
+            "es": "Actividades reservadas"
+          }
+        },
+        {
+          "key": "activities",
+          "type": "string",
+          "label": {
+            "en": "Activities",
+            "fr": "Activités",
+            "de": "Aktivitäten",
+            "es": "Actividades"
+          }
+        },
+        {
+          "key": "date",
+          "type": "string",
+          "label": { "en": "Day", "fr": "Jour", "de": "Tag", "es": "Día" }
+        }
+      ]
+    },
+    {
+      "key": "declare_absence",
+      "label": {
+        "en": "Declare a child's absence",
+        "fr": "Déclarer l'absence d'un enfant",
+        "de": "Abwesenheit eines Kindes melden",
+        "es": "Declarar la ausencia de un niño"
+      },
+      "description": {
+        "en": "Ask the municipality to cancel the booked activities of a day.",
+        "fr": "Demande à la commune d'annuler les activités réservées d'une journée.",
+        "de": "Bittet die Gemeinde, die gebuchten Aktivitäten eines Tages zu stornieren.",
+        "es": "Pide al municipio que cancele las actividades reservadas de un día."
+      },
+      "timeout_seconds": 120,
+      "fields": [
+        {
+          "key": "child",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "Child", "fr": "Enfant", "de": "Kind", "es": "Niño" },
+          "required": true
+        },
+        {
+          "key": "day",
+          "type": "number",
+          "label": {
+            "en": "Day (0 today, 1 tomorrow…)",
+            "fr": "Jour (0 aujourd'hui, 1 demain…)",
+            "de": "Tag (0 heute, 1 morgen…)",
+            "es": "Día (0 hoy, 1 mañana…)"
+          },
+          "required": false,
+          "default": 0,
+          "min": 0,
+          "max": 60
+        },
+        {
+          "key": "activity",
+          "type": "string",
+          "label": {
+            "en": "Activity (empty: all)",
+            "fr": "Activité (vide : toutes)",
+            "de": "Aktivität (leer: alle)",
+            "es": "Actividad (vacío: todas)"
+          },
+          "placeholder": {
+            "en": "e.g. canteen",
+            "fr": "ex. cantine",
+            "de": "z. B. Kantine",
+            "es": "p. ej. comedor"
+          },
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "key": "requested_count",
+          "type": "number",
+          "label": {
+            "en": "Absences requested",
+            "fr": "Absences demandées",
+            "de": "Angefragte Abwesenheiten",
+            "es": "Ausencias solicitadas"
+          }
+        },
+        {
+          "key": "activities",
+          "type": "string",
+          "label": {
+            "en": "Activities",
+            "fr": "Activités",
+            "de": "Aktivitäten",
+            "es": "Actividades"
+          }
+        },
+        {
+          "key": "date",
+          "type": "string",
+          "label": { "en": "Day", "fr": "Jour", "de": "Tag", "es": "Día" }
+        }
+      ]
+    },
+    {
+      "key": "request_reservation",
+      "label": {
+        "en": "Book a day for a child",
+        "fr": "Réserver une journée",
+        "de": "Einen Tag für ein Kind buchen",
+        "es": "Reservar un día para un niño"
+      },
+      "description": {
+        "en": "Ask for a day of an activity the child is registered to (the canteen by default).",
+        "fr": "Demande une journée d'une activité à laquelle l'enfant est inscrit (la cantine par défaut).",
+        "de": "Fragt einen Tag einer Aktivität an, für die das Kind angemeldet ist (standardmäßig die Kantine).",
+        "es": "Solicita un día de una actividad en la que el niño está inscrito (el comedor por defecto)."
+      },
+      "timeout_seconds": 120,
+      "fields": [
+        {
+          "key": "child",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "Child", "fr": "Enfant", "de": "Kind", "es": "Niño" },
+          "required": true
+        },
+        {
+          "key": "day",
+          "type": "number",
+          "label": {
+            "en": "Day (0 today, 1 tomorrow…)",
+            "fr": "Jour (0 aujourd'hui, 1 demain…)",
+            "de": "Tag (0 heute, 1 morgen…)",
+            "es": "Día (0 hoy, 1 mañana…)"
+          },
+          "required": false,
+          "default": 1,
+          "min": 0,
+          "max": 60
+        },
+        {
+          "key": "activity",
+          "type": "string",
+          "label": {
+            "en": "Activity (empty: canteen)",
+            "fr": "Activité (vide : cantine)",
+            "de": "Aktivität (leer: Kantine)",
+            "es": "Actividad (vacío: comedor)"
+          },
+          "placeholder": {
+            "en": "e.g. after-school club",
+            "fr": "ex. garderie du soir",
+            "de": "z. B. Nachmittagsbetreuung",
+            "es": "p. ej. guardería de tarde"
+          },
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "key": "requested",
+          "type": "boolean",
+          "label": {
+            "en": "Booking requested",
+            "fr": "Réservation demandée",
+            "de": "Buchung angefragt",
+            "es": "Reserva solicitada"
+          }
+        },
+        {
+          "key": "already_booked",
+          "type": "boolean",
+          "label": {
+            "en": "Already booked",
+            "fr": "Déjà réservé",
+            "de": "Bereits gebucht",
+            "es": "Ya reservado"
+          }
+        },
+        {
+          "key": "activity",
+          "type": "string",
+          "label": { "en": "Activity", "fr": "Activité", "de": "Aktivität", "es": "Actividad" }
+        },
+        {
+          "key": "date",
+          "type": "string",
+          "label": { "en": "Day", "fr": "Jour", "de": "Tag", "es": "Día" }
+        }
+      ]
+    }
+  ],
+  "widgets": [
+    {
+      "key": "family",
+      "label": {
+        "en": "Agora Famille",
+        "fr": "Agora Famille",
+        "de": "Agora Famille",
+        "es": "Agora Famille"
+      },
+      "description": {
+        "en": "Canteen today and tomorrow, invoices to pay, unread messages.",
+        "fr": "Cantine aujourd'hui et demain, factures à payer, messages non lus.",
+        "de": "Kantine heute und morgen, offene Rechnungen, ungelesene Nachrichten.",
+        "es": "Comedor hoy y mañana, facturas por pagar, mensajes sin leer."
+      },
+      "icon": "users",
+      "action_timeout_seconds": 120
+    }
+  ]
+}

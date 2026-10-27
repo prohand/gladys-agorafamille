@@ -1,0 +1,31 @@
+# Changelog
+
+All notable changes to this integration are documented here. The format follows
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
+[semantic versioning](https://semver.org/), bumped by the Release workflow.
+
+Describe each change under `## [Unreleased]` as you make it. The Release workflow moves that
+section under the version it ships, and the section becomes the notes of the version's GitHub
+Release.
+
+## [Unreleased]
+
+### Added
+
+- Agora Famille integration for Gladys 5.3+, started from the official JavaScript template:
+  sign-in to the family portal of the municipality, read on a timer (15 minutes minimum).
+- An **Agora Famille** account device (balance due, next invoice, last message) and one device
+  per child (today's and tomorrow's bookings, canteen today and tomorrow).
+- Scene triggers: a new invoice, an invoice due soon, a message received, a booking that
+  changes state (filterable by child and state).
+- Scene actions: read the portal, check a child's day, declare an absence, book a day.
+- **Agora Famille** dashboard widget: balance, children today and tomorrow, invoices to pay,
+  unread messages, absence and lunch forms, link to the portal.
+- "Test the connection" action naming the step that fails.
+- Cloud transport badge on every device, unreachable while the portal cannot be read.
+- English, French, German and Spanish texts and documentation.
+- `SECURITY.md`, `CHANGELOG.md` and `CLAUDE.md`.
+- CI (Prettier, ESLint, tests on Node 22 and 24, store checks, Docker build), UI-driven
+  Release, multi-arch build, GitHub Releases and Dependabot.
+
+[Unreleased]: https://github.com/prohand/gladys-agorafamille/commits/main
