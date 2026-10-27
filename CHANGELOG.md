@@ -10,6 +10,8 @@ Release.
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-10-27
+
 ### Added
 
 - Invoices sent to the Trésor public ("mise en impayé") are set apart: not counted in the
@@ -75,5 +77,6 @@ Release.
 - CI (Prettier, ESLint, tests on Node 22 and 24, store checks, Docker build), UI-driven
   Release, multi-arch build, GitHub Releases and Dependabot.
 
-[Unreleased]: https://github.com/prohand/gladys-agorafamille/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/prohand/gladys-agorafamille/compare/v2.0.1...HEAD
+[2.0.1]: https://github.com/prohand/gladys-agorafamille/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/prohand/gladys-agorafamille/releases/tag/v2.0.0
