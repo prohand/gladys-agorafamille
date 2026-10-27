@@ -22,6 +22,8 @@ Release.
 - **Agora Famille** dashboard widget: balance, children today and tomorrow, invoices to pay,
   unread messages, absence and lunch forms, link to the portal.
 - "Test the connection" action naming the step that fails.
+- A request the portal refuses logs its address, its HTTP status and the start of the answer
+  (login and password masked), to adapt the portal requests.
 - Cloud transport badge on every device, unreachable while the portal cannot be read.
 - English, French, German and Spanish texts and documentation.
 - `SECURITY.md`, `CHANGELOG.md` and `CLAUDE.md`.

@@ -103,3 +103,33 @@ test('a request the portal declines is reported as refused', async () => {
     { code: ERROR_CODES.REFUSED, message: 'Délai dépassé' },
   );
 });
+
+test('a refused login logs what the portal answered, secrets masked', async (t) => {
+  const portal = createFakePortal();
+  const client = clientFor(portal);
+  client.fetch = async () =>
+    new Response(
+      `<html><body><h1>Bad Request</h1><p>p_login=${portal.username} p_password=${portal.password}</p></body></html>`,
+      { status: 400, headers: { 'content-type': 'text/html' } },
+    );
+  const lines = [];
+  t.mock.method(console, 'error', (...args) => lines.push(args.join(' ')));
+  // Whatever level the test run was started with, warnings are shown.
+  const level = process.env.LOG_LEVEL;
+  process.env.LOG_LEVEL = 'info';
+  t.after(() => {
+    if (level === undefined) {
+      delete process.env.LOG_LEVEL;
+    } else {
+      process.env.LOG_LEVEL = level;
+    }
+  });
+
+  await assert.rejects(client.getChildren(), { code: ERROR_CODES.HTTP, status: 400 });
+
+  const line = lines.find((entry) => entry.includes('HTTP 400'));
+  assert.ok(line, 'the answer is logged');
+  assert.match(line, new RegExp(`POST ${BASE}/${ENDPOINTS.login.path}`));
+  assert.match(line, /Bad Request p_login=\*\*\* p_password=\*\*\*/);
+  assert.ok(!line.includes(portal.password) && !line.includes(portal.username));
+});

@@ -93,6 +93,7 @@ export class AgoraClient {
       });
     }
     if (response.status >= 400) {
+      await this.logAnswer(ENDPOINTS.login, response);
       throw new AgoraError(ERROR_CODES.HTTP, `Login answered HTTP ${response.status}`, {
         status: response.status,
         step: 'login',
@@ -205,6 +206,7 @@ export class AgoraClient {
       throw new SessionExpired();
     }
     if (response.status >= 400) {
+      await this.logAnswer(endpoint, response);
       throw new AgoraError(ERROR_CODES.HTTP, `"${options.step}" answered HTTP ${response.status}`, {
         status: response.status,
         step: options.step,
@@ -262,6 +264,37 @@ export class AgoraClient {
     }
     this.keepCookies(response);
     return response;
+  }
+
+  /**
+   * What the portal answered to a request it refused, for the logs: the URL
+   * asked, the type and the start of the answer, tags and blanks removed. It
+   * is what tells a wrong address (an error page of the server) from wrong
+   * field names (a message of the portal) — the only way to adapt
+   * src/agora/endpoints.js to a portal nobody documents. The login and the
+   * password are masked, in case the page repeats what it was sent.
+   */
+  async logAnswer(endpoint, response) {
+    let excerpt = '';
+    try {
+      excerpt = (await response.text())
+        .replace(/<(script|style)[\s\S]*?<\/\1>/gi, ' ')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    } catch {
+      // No body to show.
+    }
+    for (const secret of [this.password, this.username]) {
+      if (secret) {
+        excerpt = excerpt.split(secret).join('***');
+      }
+    }
+    logger.warn(
+      `${endpoint.method} ${this.base}/${endpoint.path} -> HTTP ${response.status} ` +
+        `(${response.headers.get('content-type') ?? 'no content type'}): ` +
+        `${excerpt.slice(0, 300) || '(empty answer)'}`,
+    );
   }
 
   keepCookies(response) {
