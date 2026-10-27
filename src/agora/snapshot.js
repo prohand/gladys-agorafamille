@@ -48,8 +48,21 @@ export function buildSnapshot({
   };
 }
 
-/** The invoices still to pay, the one due first first. */
+/**
+ * The invoices still to pay, the one due first first. An invoice sent to the
+ * Trésor public is not one of them: the portal shows it unpaid forever, paid
+ * to the Trésor or not (see treasuryInvoices).
+ */
 export function unpaidInvoices(snapshot) {
+  return openInvoices(snapshot).filter((invoice) => !invoice.treasury);
+}
+
+/** The invoices the portal shows unpaid but the Trésor public collects. */
+export function treasuryInvoices(snapshot) {
+  return openInvoices(snapshot).filter((invoice) => invoice.treasury);
+}
+
+function openInvoices(snapshot) {
   return (snapshot?.invoices ?? [])
     .filter((invoice) => !invoice.paid && invoice.remaining > 0)
     .sort((a, b) => (a.dueOn ?? '9999').localeCompare(b.dueOn ?? '9999'));
@@ -136,7 +149,7 @@ export function diffSnapshots(previous, current, { dueReminderDays, reminded = [
   // invoices are not news, they are the module appearing.
   if (previous.modules?.invoices !== false) {
     for (const invoice of current.invoices) {
-      if (!knownInvoices.has(invoice.id) && !invoice.paid) {
+      if (!knownInvoices.has(invoice.id) && !invoice.paid && !invoice.treasury) {
         events.push({
           key: SCENE_TRIGGERS.INVOICE_ISSUED,
           data: {

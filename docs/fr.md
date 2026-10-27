@@ -30,15 +30,16 @@ vous donne dans Gladys :
 
 Dans Gladys : **Intégrations → Agora Famille → Configuration**.
 
-| Champ                           | Ce qu'il faut y mettre                                                                                                                                                                      |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Adresse du portail**          | L'adresse de votre portail telle que l'affiche votre navigateur, par ex. `https://portalssl.agoraplus.fr/maville/pck_home.home_view#/`. Le seul nom de la commune (`maville`) suffit aussi. |
-| **Identifiant (e-mail)**        | L'e-mail de votre compte famille.                                                                                                                                                           |
-| **Mot de passe**                | Le mot de passe du portail. Il est stocké comme un secret par Gladys et n'apparaît jamais dans les logs.                                                                                    |
-| **Intervalle de lecture (min)** | Fréquence de lecture du portail (60 min par défaut, 15 min minimum). Inutile d'aller plus vite : le portail change peu dans la journée.                                                     |
-| **Jours de planning suivis**    | Combien de jours à venir sont lus et surveillés (14 par défaut).                                                                                                                            |
-| **Rappel de facture (jours)**   | Le déclencheur « facture bientôt à échéance » part ce nombre de jours avant l'échéance (3 par défaut, 0 pour le couper).                                                                    |
-| **Logs détaillés**              | Journalise chaque requête au portail, pour le dépannage. Jamais le mot de passe.                                                                                                            |
+| Champ                                    | Ce qu'il faut y mettre                                                                                                                                                                      |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Adresse du portail**                   | L'adresse de votre portail telle que l'affiche votre navigateur, par ex. `https://portalssl.agoraplus.fr/maville/pck_home.home_view#/`. Le seul nom de la commune (`maville`) suffit aussi. |
+| **Identifiant (e-mail)**                 | L'e-mail de votre compte famille.                                                                                                                                                           |
+| **Mot de passe**                         | Le mot de passe du portail. Il est stocké comme un secret par Gladys et n'apparaît jamais dans les logs.                                                                                    |
+| **Intervalle de lecture (min)**          | Fréquence de lecture du portail (60 min par défaut, 15 min minimum). Inutile d'aller plus vite : le portail change peu dans la journée.                                                     |
+| **Jours de planning suivis**             | Combien de jours à venir sont lus et surveillés (14 par défaut).                                                                                                                            |
+| **Rappel de facture (jours)**            | Le déclencheur « facture bientôt à échéance » part ce nombre de jours avant l'échéance (3 par défaut, 0 pour le couper).                                                                    |
+| **Factures transmises au Trésor public** | Numéros des factures que la commune a transmises au Trésor public, séparés par des virgules (ex. `164513`). Voir plus bas.                                                                  |
+| **Logs détaillés**                       | Journalise chaque requête au portail, pour le dépannage. Jamais le mot de passe.                                                                                                            |
 
 Cliquez ensuite sur **Tester la connexion** : la réponse liste vos enfants, le
 nombre de jours de planning lus, les factures à payer et les messages non lus.
@@ -126,6 +127,27 @@ Le widget **Agora Famille** du tableau de bord montre :
 
 Et deux boutons : **Actualiser** et **Ouvrir le portail**. Les absences et
 les réservations se font sur le portail.
+
+## Factures transmises au Trésor public
+
+Quand une facture n'est pas payée à temps, la commune la transmet au **Trésor
+public** (« mise en impayé »). Le portail ne suit alors plus son paiement : il
+la montre **impayée pour toujours**, même une fois payée au Trésor.
+
+L'intégration met ces factures **à part** :
+
+- elles ne comptent pas dans le **reste à payer** ni dans la **prochaine
+  facture** ;
+- elles ne déclenchent ni « nouvelle facture » ni « facture bientôt à
+  échéance » ;
+- le widget les montre en gris, avec le badge **Trésor public**.
+
+Elles sont reconnues de deux façons :
+
+- **toute seules**, quand le portail les marque (facture en contentieux, ou un
+  état qui parle du Trésor) ;
+- **par leur numéro**, dans le champ **Factures transmises au Trésor public**
+  (le numéro affiché sur le portail, ex. `164513`).
 
 ## Dépannage
 

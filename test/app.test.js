@@ -302,3 +302,39 @@ test('the widget is read-only, with the last three unread messages', async (t) =
     ['Message 6', 'Message 5', 'Message 4'],
   );
 });
+
+test('an invoice sent to the Trésor public is shown apart and not owed', async (t) => {
+  const portal = family();
+  portal.invoices.push({
+    numFacture: '164513',
+    libelle: 'Décembre 2025',
+    montant: '64,80',
+    dateEcheance: '15/01/2026',
+  });
+  const { gladys, app } = await start(portal, createMemoryStore(), {
+    treasury_invoices: '#164513',
+  });
+  t.after(() => app.stop());
+
+  const account = accountIds(gladys, config);
+  assert.equal(gladys.fake.lastState(account.feature(ACCOUNT_FEATURES.BALANCE)), 45.2);
+
+  const ack = await gladys.fake.widgetGet(FAMILY_WIDGET, { settings: {}, language: 'fr' });
+  const content = ack.data.content ?? ack.data;
+  assert.deepEqual(validateWidgetContent(content), []);
+  assert.equal(content.components.find((component) => component.type === 'value').value, '45,20');
+  const cards = content.components.find((component) => component.type === 'card-list').items;
+  assert.deepEqual(
+    cards.slice(0, 2).map((card) => [card.title, card.badge.text, card.badge.color]),
+    [
+      ['Octobre 2026', 'À payer', 'warning'],
+      ['Décembre 2025', 'Trésor public', 'neutral'],
+    ],
+  );
+  assert.match(cards[1].description, /rien d'autre à faire/);
+
+  const answer = await gladys.fake.action('test_connection', {});
+  const message = answer.data.message ?? answer.data;
+  assert.match(message.fr, /1 facture\(s\) à payer/);
+  assert.match(message.fr, /1 facture\(s\) transmise\(s\) au Trésor public/);
+});

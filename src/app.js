@@ -11,7 +11,7 @@ import { normalizeConfig } from './config.js';
 import { applyLogLevel, createLogger } from './logging.js';
 import { createAgoraService } from './agora/service.js';
 import { createStore } from './agora/store.js';
-import { balanceOf, unpaidInvoices, unreadMessages } from './agora/snapshot.js';
+import { balanceOf, treasuryInvoices, unpaidInvoices, unreadMessages } from './agora/snapshot.js';
 import { STATE_HEARTBEAT_MS, buildDevices, buildStates, buildTransports } from './devices/index.js';
 import { SCENE_ACTIONS, createSceneActions, publishEvents } from './capabilities/scenes.js';
 import { FAMILY_WIDGET, createWidget } from './capabilities/widget.js';
@@ -230,6 +230,17 @@ export function describeSnapshot(snapshot) {
           es: `${unpaid} factura(s) por pagar, ${balance} en total.`,
         }),
       );
+      const treasury = treasuryInvoices(snapshot).length;
+      if (treasury > 0) {
+        parts.push(
+          pick(language, {
+            en: `${treasury} invoice(s) sent to the Trésor public, not counted.`,
+            fr: `${treasury} facture(s) transmise(s) au Trésor public, non comptée(s).`,
+            de: `${treasury} Rechnung(en) an den Trésor public übergeben, nicht mitgezählt.`,
+            es: `${treasury} factura(s) transmitida(s) al Trésor public, no contada(s).`,
+          }),
+        );
+      }
     }
     if (!snapshot.modules.invoices) {
       parts.push(

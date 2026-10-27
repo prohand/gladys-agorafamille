@@ -10,6 +10,13 @@ Release.
 
 ## [Unreleased]
 
+### Added
+
+- Invoices sent to the Trésor public ("mise en impayé") are set apart: not counted in the
+  balance nor as the next invoice, never announced by the invoice triggers, shown in grey in
+  the widget. They are found from the portal (`isLitigation`, a state naming the Trésor) or
+  from their numbers, in the new "Invoices sent to the Trésor public" setting.
+
 ### Changed
 
 - A new cover for the store.

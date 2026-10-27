@@ -7,6 +7,8 @@ import {
   buildSnapshot,
   diffSnapshots,
   hasMeal,
+  treasuryInvoices,
+  unpaidInvoices,
 } from '../src/agora/snapshot.js';
 
 const children = [{ id: '7', firstName: 'Léa', name: 'Léa' }];
@@ -141,4 +143,20 @@ test('the balance is the exact sum, never rounded', () => {
     ],
   });
   assert.equal(balanceOf(current), 12.645);
+});
+
+test('an invoice sent to the Trésor public is set apart: not owed, never announced', () => {
+  const before = snapshot({ invoices: [invoice('F1')] });
+  const after = snapshot({
+    invoices: [invoice('F1', { treasury: true }), invoice('F2', { treasury: true })],
+  });
+  assert.equal(balanceOf(after), 0);
+  assert.deepEqual(unpaidInvoices(after), []);
+  assert.deepEqual(
+    treasuryInvoices(after).map((entry) => entry.id),
+    ['F1', 'F2'],
+  );
+  // Neither the one set apart nor a new one sent straight there is news.
+  const { events } = diffSnapshots(before, after, { dueReminderDays: 30 });
+  assert.deepEqual(events, []);
 });

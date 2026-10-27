@@ -11,6 +11,7 @@
 // -----------------------------------------------------------------------------
 
 import { createHash } from 'node:crypto';
+import { parseInvoiceNumbers } from './agora/parse.js';
 
 // Defaults: they MUST stay consistent with the `default` values declared in the
 // `config_schema` of the manifest (test/manifest.test.js checks it).
@@ -21,6 +22,7 @@ export const DEFAULT_CONFIG = {
   refresh_minutes: 60, // minutes between two reads of the portal
   days_ahead: 14, // how many days of reservations are watched
   due_reminder_days: 3, // "invoice due soon" this many days before; 0 = off
+  treasury_invoices: '', // invoice numbers sent to the Trésor public, e.g. "164513"
   debug_logs: false, // raise the log level to debug, from the Configuration screen
 };
 
@@ -62,7 +64,9 @@ export function normalizeConfig(raw = {}) {
       MAX_DUE_REMINDER_DAYS,
     ),
     debug_logs: toBoolean(raw.debug_logs, DEFAULT_CONFIG.debug_logs),
+    treasury_invoices: String(raw.treasury_invoices ?? ''),
   };
+  config.treasuryInvoices = parseInvoiceNumbers(config.treasury_invoices);
   const portal = parsePortalUrl(raw.portal_url);
   config.portal_url = portal?.url ?? '';
   config.portalBase = portal?.base ?? null;

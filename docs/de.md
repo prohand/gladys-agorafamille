@@ -29,15 +29,16 @@ und bietet dir in Gladys:
 
 In Gladys: **Integrationen → Agora Famille → Konfiguration**.
 
-| Feld                               | Was einzutragen ist                                                                                                                                                                     |
-| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Portaladresse**                  | Die Adresse deines Portals, wie dein Browser sie anzeigt, z. B. `https://portalssl.agoraplus.fr/meinestadt/pck_home.home_view#/`. Nur der Name der Gemeinde (`meinestadt`) genügt auch. |
-| **Benutzername (E-Mail)**          | Die E-Mail deines Familienkontos.                                                                                                                                                       |
-| **Passwort**                       | Das Passwort des Portals. Gladys speichert es als Geheimnis, es erscheint nie in den Protokollen.                                                                                       |
-| **Aktualisierungsintervall (min)** | Wie oft das Portal gelesen wird (standardmäßig 60 min, mindestens 15 min).                                                                                                              |
-| **Beobachtete Planungstage**       | Wie viele Tage im Voraus gelesen und überwacht werden (standardmäßig 14).                                                                                                               |
-| **Rechnungserinnerung (Tage)**     | Der Auslöser „Rechnung bald fällig“ wird so viele Tage vor dem Fälligkeitsdatum ausgelöst (standardmäßig 3, 0 schaltet ihn ab).                                                         |
-| **Ausführliche Protokolle**        | Protokolliert jede Anfrage an das Portal, zur Fehlersuche. Nie das Passwort.                                                                                                            |
+| Feld                                           | Was einzutragen ist                                                                                                                                                                     |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Portaladresse**                              | Die Adresse deines Portals, wie dein Browser sie anzeigt, z. B. `https://portalssl.agoraplus.fr/meinestadt/pck_home.home_view#/`. Nur der Name der Gemeinde (`meinestadt`) genügt auch. |
+| **Benutzername (E-Mail)**                      | Die E-Mail deines Familienkontos.                                                                                                                                                       |
+| **Passwort**                                   | Das Passwort des Portals. Gladys speichert es als Geheimnis, es erscheint nie in den Protokollen.                                                                                       |
+| **Aktualisierungsintervall (min)**             | Wie oft das Portal gelesen wird (standardmäßig 60 min, mindestens 15 min).                                                                                                              |
+| **Beobachtete Planungstage**                   | Wie viele Tage im Voraus gelesen und überwacht werden (standardmäßig 14).                                                                                                               |
+| **Rechnungserinnerung (Tage)**                 | Der Auslöser „Rechnung bald fällig“ wird so viele Tage vor dem Fälligkeitsdatum ausgelöst (standardmäßig 3, 0 schaltet ihn ab).                                                         |
+| **An den Trésor public übergebene Rechnungen** | Nummern der Rechnungen, die die Gemeinde an den Trésor public übergeben hat, durch Kommas getrennt (z. B. `164513`). Siehe unten.                                                       |
+| **Ausführliche Protokolle**                    | Protokolliert jede Anfrage an das Portal, zur Fehlersuche. Nie das Passwort.                                                                                                            |
 
 Klicke dann auf **Verbindung testen**: Die Antwort nennt deine Kinder, die
 Zahl der gelesenen Planungstage, die offenen Rechnungen und die ungelesenen
@@ -124,6 +125,26 @@ Das Dashboard-Widget **Agora Famille** zeigt:
 
 Und zwei Tasten: **Aktualisieren** und **Portal öffnen**. Abwesenheiten und
 Buchungen werden im Portal erledigt.
+
+## An den Trésor public übergebene Rechnungen
+
+Wird eine Rechnung nicht rechtzeitig bezahlt, übergibt die Gemeinde sie an den
+**Trésor public** (die französische Staatskasse, „mise en impayé“). Das Portal
+verfolgt die Zahlung dann nicht mehr: Es zeigt sie **für immer als
+unbezahlt**, auch nachdem sie beim Trésor bezahlt wurde.
+
+Die Integration stellt diese Rechnungen **beiseite**:
+
+- Sie zählen weder zum **offenen Betrag** noch als **nächste Rechnung**;
+- sie lösen weder „neue Rechnung“ noch „Rechnung bald fällig“ aus;
+- das Widget zeigt sie grau, mit dem Abzeichen **Staatskasse**.
+
+Sie werden auf zwei Arten erkannt:
+
+- **von selbst**, wenn das Portal sie markiert (eine Rechnung im
+  Mahnverfahren oder ein Status, der den Trésor nennt);
+- **über ihre Nummer** im Feld **An den Trésor public übergebene Rechnungen**
+  (die im Portal angezeigte Nummer, z. B. `164513`).
 
 ## Fehlerbehebung
 

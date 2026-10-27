@@ -4,8 +4,10 @@ import assert from 'node:assert/strict';
 import {
   RESERVATION_STATUS,
   isMeal,
+  markTreasury,
   parseAmount,
   parseChildren,
+  parseInvoiceNumbers,
   parseInvoices,
   parseMessages,
   parsePlanning,
@@ -257,4 +259,43 @@ test('the messages of the API (DATA.data) are read', async () => {
       read: false,
     },
   ]);
+});
+
+test('an invoice sent to the Trésor public is told by the portal', () => {
+  const invoices = parseInvoices([
+    { idInvoice: 1, total: 64.8, TOTAL_PAID: 0, STATUS: 'Impayée', isLitigation: 1 },
+    { idInvoice: 2, total: 20, TOTAL_PAID: 0, STATUS: 'Transmise au Trésor public' },
+    { idInvoice: 3, total: 30, TOTAL_PAID: 0, STATUS: 'Impayée', isLitigation: 0 },
+    { idInvoice: 4, total: 30, TOTAL_PAID: 0, STATUS: 'Non payée', isLitigation: null },
+  ]);
+  assert.deepEqual(
+    invoices.map((invoice) => [invoice.id, invoice.treasury]),
+    [
+      ['1', true],
+      ['2', true],
+      ['3', false],
+      ['4', false],
+    ],
+  );
+});
+
+test('the invoice numbers a family types mark their invoices as sent to the Trésor', () => {
+  assert.deepEqual(parseInvoiceNumbers(' #164513, 170002\n164513;F10 '), [
+    '164513',
+    '170002',
+    'F10',
+  ]);
+  assert.deepEqual(parseInvoiceNumbers(''), []);
+  const invoices = parseInvoices([
+    { idInvoice: 164513, total: 64.8, TOTAL_PAID: 0 },
+    { idInvoice: 164514, total: 10, TOTAL_PAID: 0 },
+  ]);
+  assert.deepEqual(
+    markTreasury(invoices, ['164513']).map((invoice) => [invoice.id, invoice.treasury]),
+    [
+      ['164513', true],
+      ['164514', false],
+    ],
+  );
+  assert.equal(markTreasury(invoices, []), invoices);
 });

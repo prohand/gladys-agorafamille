@@ -29,15 +29,16 @@ gives you in Gladys:
 
 In Gladys: **Integrations → Agora Famille → Configuration**.
 
-| Field                        | What to enter                                                                                                                                                                    |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Portal address**           | The address of your portal as your browser shows it, e.g. `https://portalssl.agoraplus.fr/mycity/pck_home.home_view#/`. The name of the municipality alone (`mycity`) works too. |
-| **Login (e-mail)**           | The e-mail of your family account.                                                                                                                                               |
-| **Password**                 | The portal password. Gladys stores it as a secret, and it never appears in the logs.                                                                                             |
-| **Refresh interval (min)**   | How often the portal is read (60 min by default, 15 min minimum). There is no point going faster: the portal changes little in a day.                                            |
-| **Days of planning watched** | How many days ahead are read and watched (14 by default).                                                                                                                        |
-| **Invoice reminder (days)**  | The "invoice due soon" trigger fires this many days before the due date (3 by default, 0 turns it off).                                                                          |
-| **Detailed logs**            | Logs every request to the portal, for troubleshooting. Never the password.                                                                                                       |
+| Field                                  | What to enter                                                                                                                                                                    |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Portal address**                     | The address of your portal as your browser shows it, e.g. `https://portalssl.agoraplus.fr/mycity/pck_home.home_view#/`. The name of the municipality alone (`mycity`) works too. |
+| **Login (e-mail)**                     | The e-mail of your family account.                                                                                                                                               |
+| **Password**                           | The portal password. Gladys stores it as a secret, and it never appears in the logs.                                                                                             |
+| **Refresh interval (min)**             | How often the portal is read (60 min by default, 15 min minimum). There is no point going faster: the portal changes little in a day.                                            |
+| **Days of planning watched**           | How many days ahead are read and watched (14 by default).                                                                                                                        |
+| **Invoice reminder (days)**            | The "invoice due soon" trigger fires this many days before the due date (3 by default, 0 turns it off).                                                                          |
+| **Invoices sent to the Trésor public** | Numbers of the invoices the municipality sent to the Trésor public, separated by commas (e.g. `164513`). See below.                                                              |
+| **Detailed logs**                      | Logs every request to the portal, for troubleshooting. Never the password.                                                                                                       |
 
 Then click **Test the connection**: the answer lists your children, the
 number of planned days read, the invoices to pay and the unread messages. On
@@ -123,6 +124,26 @@ The **Agora Famille** dashboard widget shows:
 
 And two buttons: **Refresh** and **Open portal**. Absences and bookings are
 made on the portal.
+
+## Invoices sent to the Trésor public
+
+When an invoice is not paid in time, the municipality sends it to the
+**Trésor public** (the French public treasury, "mise en impayé"). The portal
+then no longer follows its payment: it shows it **unpaid forever**, even once
+paid to the Trésor.
+
+The integration sets these invoices **apart**:
+
+- they are not counted in the **balance due** nor as the **next invoice**;
+- they fire neither "new invoice" nor "invoice due soon";
+- the widget shows them in grey, with the **Treasury** badge.
+
+They are recognised in two ways:
+
+- **on their own**, when the portal marks them (an invoice in litigation, or a
+  state naming the Trésor);
+- **by their number**, in the **Invoices sent to the Trésor public** field
+  (the number the portal shows, e.g. `164513`).
 
 ## Troubleshooting
 

@@ -20,6 +20,7 @@ import {
   balanceOf,
   dayEntries,
   expectedActivities,
+  treasuryInvoices,
   unpaidInvoices,
   unreadMessages,
 } from '../agora/snapshot.js';
@@ -168,7 +169,10 @@ function childRows(snapshot, language) {
   return rows;
 }
 
-/** The invoices to pay first, then the unread messages. */
+/**
+ * The invoices to pay first, then the ones sent to the Trésor public (in
+ * grey: not counted in what is owed), then the unread messages.
+ */
 function buildCards(snapshot, language) {
   if (!snapshot) {
     return [];
@@ -197,6 +201,15 @@ function buildCards(snapshot, language) {
             },
     });
   }
+  for (const invoice of treasuryInvoices(snapshot)) {
+    cards.push({
+      title: cut(invoice.label, LIMITS.cardTitle),
+      subtitle: formatEuros(invoice.remaining, language),
+      ...(invoice.dueOn ? { date: invoice.dueOn } : {}),
+      badge: { text: pick(language, TREASURY_BADGE), color: WIDGET_COLORS.NEUTRAL },
+      description: pick(language, TREASURY_NOTE),
+    });
+  }
   for (const message of unreadMessages(snapshot).slice(0, MAX_MESSAGES)) {
     cards.push({
       title: cut(message.subject, LIMITS.cardTitle),
@@ -210,6 +223,15 @@ function buildCards(snapshot, language) {
   }
   return cards.slice(0, MAX_CARDS);
 }
+
+const TREASURY_BADGE = { en: 'Treasury', fr: 'Trésor public', de: 'Staatskasse', es: 'Tesoro' };
+
+const TREASURY_NOTE = {
+  en: 'Sent to the Trésor public: the portal no longer follows its payment and will keep showing it unpaid. It is not counted in the balance. Paid to the Trésor? Nothing more to do.',
+  fr: "Transmise au Trésor public : le portail ne suit plus son paiement et la montrera toujours impayée. Elle n'est pas comptée dans le reste à payer. Payée au Trésor ? Il n'y a rien d'autre à faire.",
+  de: 'An den Trésor public übergeben: Das Portal verfolgt die Zahlung nicht mehr und zeigt sie weiter als unbezahlt. Sie zählt nicht zum offenen Betrag. Beim Trésor bezahlt? Dann ist nichts mehr zu tun.',
+  es: 'Transmitida al Trésor public: el portal ya no sigue su pago y la seguirá mostrando impagada. No se cuenta en el saldo pendiente. ¿Pagada al Trésor? No hay nada más que hacer.',
+};
 
 function caption(snapshot, error, language) {
   if (error) {

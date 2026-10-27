@@ -30,15 +30,16 @@ en Gladys:
 
 En Gladys: **Integraciones → Agora Famille → Configuración**.
 
-| Campo                              | Qué poner                                                                                                                                                                                  |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Dirección del portal**           | La dirección de su portal tal como la muestra su navegador, p. ej. `https://portalssl.agoraplus.fr/miciudad/pck_home.home_view#/`. Basta también con el nombre del municipio (`miciudad`). |
-| **Usuario (correo)**               | El correo de su cuenta familiar.                                                                                                                                                           |
-| **Contraseña**                     | La contraseña del portal. Gladys la guarda como secreto y nunca aparece en los registros.                                                                                                  |
-| **Intervalo de lectura (min)**     | Cada cuánto se lee el portal (60 min por defecto, 15 min como mínimo).                                                                                                                     |
-| **Días de planificación seguidos** | Cuántos días por adelantado se leen y vigilan (14 por defecto).                                                                                                                            |
-| **Aviso de factura (días)**        | El disparador «factura a punto de vencer» se activa estos días antes del vencimiento (3 por defecto, 0 lo desactiva).                                                                      |
-| **Registros detallados**           | Registra cada petición al portal, para diagnosticar. Nunca la contraseña.                                                                                                                  |
+| Campo                                      | Qué poner                                                                                                                                                                                  |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Dirección del portal**                   | La dirección de su portal tal como la muestra su navegador, p. ej. `https://portalssl.agoraplus.fr/miciudad/pck_home.home_view#/`. Basta también con el nombre del municipio (`miciudad`). |
+| **Usuario (correo)**                       | El correo de su cuenta familiar.                                                                                                                                                           |
+| **Contraseña**                             | La contraseña del portal. Gladys la guarda como secreto y nunca aparece en los registros.                                                                                                  |
+| **Intervalo de lectura (min)**             | Cada cuánto se lee el portal (60 min por defecto, 15 min como mínimo).                                                                                                                     |
+| **Días de planificación seguidos**         | Cuántos días por adelantado se leen y vigilan (14 por defecto).                                                                                                                            |
+| **Aviso de factura (días)**                | El disparador «factura a punto de vencer» se activa estos días antes del vencimiento (3 por defecto, 0 lo desactiva).                                                                      |
+| **Facturas transmitidas al Trésor public** | Números de las facturas que el municipio transmitió al Trésor public, separados por comas (p. ej. `164513`). Vea más abajo.                                                                |
+| **Registros detallados**                   | Registra cada petición al portal, para diagnosticar. Nunca la contraseña.                                                                                                                  |
 
 Pulse después **Probar la conexión**: la respuesta indica sus hijos, el
 número de días de planificación leídos, las facturas por pagar y los mensajes
@@ -125,6 +126,26 @@ El widget **Agora Famille** del panel muestra:
 
 Y dos botones: **Actualizar** y **Abrir portal**. Las ausencias y las reservas
 se hacen en el portal.
+
+## Facturas transmitidas al Trésor public
+
+Cuando una factura no se paga a tiempo, el municipio la transmite al **Trésor
+public** (el tesoro público francés, «mise en impayé»). El portal deja
+entonces de seguir su pago: la muestra **impagada para siempre**, incluso una
+vez pagada al Trésor.
+
+La integración pone estas facturas **aparte**:
+
+- no cuentan en el **saldo pendiente** ni como **próxima factura**;
+- no disparan ni «nueva factura» ni «factura a punto de vencer»;
+- el widget las muestra en gris, con la insignia **Tesoro**.
+
+Se reconocen de dos formas:
+
+- **solas**, cuando el portal las marca (factura en contencioso, o un estado
+  que menciona el Trésor);
+- **por su número**, en el campo **Facturas transmitidas al Trésor public**
+  (el número que muestra el portal, p. ej. `164513`).
 
 ## Solución de problemas
 
