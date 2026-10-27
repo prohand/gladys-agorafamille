@@ -60,8 +60,14 @@ export const ENDPOINTS = {
     path: 'InternalApi/API_DASHBOARD/invoicesAgpGrid',
     params: { state: 'all' },
   },
-  /** The messages and notifications of the municipality. Not captured yet. */
-  messages: { method: 'GET', path: null },
+  /**
+   * The last messages of the municipality, newest first (10 a page).
+   * Captured from the portal (October 2026):
+   * GET /InternalApi/API_DASHBOARD/emailLogs/0/1  (the last part is the page)
+   * Answers `{ DATA: { count, data: [{ ID_NOTIFICATIONS, SUBJECT, SENDER,
+   * SEND_DATE, IS_READ, BODY }] }, ERROR, TYPE_RESULT }`.
+   */
+  messages: { method: 'GET', path: 'InternalApi/API_DASHBOARD/emailLogs/0/1' },
   /** Ask to book one day of an activity. Not captured yet. */
   reserve: { method: 'POST', path: null },
   /** Ask to cancel one booked day of an activity. Not captured yet. */

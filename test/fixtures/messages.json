@@ -1,0 +1,46 @@
+{
+  "DATA": {
+    "count": 151,
+    "data": [
+      {
+        "IS_READ": 0,
+        "ID_TYPE_NOTIF_READ": 3,
+        "ID_NOTIFICATIONS": 597405,
+        "SENDER": "Agent  MAIRIE",
+        "ID_LOG_NOTIF_READ": -1,
+        "SUBJECT": " Animations de la Toussaint à la piscine",
+        "PAGE": 1,
+        "COUNT": 151,
+        "BODY": "<p>Ch&egrave;res familles,</p>\n<p>Texte du message.</p>\n",
+        "SEND_DATE": "16/10/2026 09:58"
+      },
+      {
+        "IS_READ": 1,
+        "ID_TYPE_NOTIF_READ": 3,
+        "ID_NOTIFICATIONS": 586376,
+        "SENDER": "Agent MAIRIE",
+        "ID_LOG_NOTIF_READ": 40001,
+        "SUBJECT": "Facturation restauration scolaire Septembre 2026",
+        "PAGE": 1,
+        "COUNT": 151,
+        "BODY": "<p>Ch&egrave;res familles,</p>\n<p>Texte du message.</p>\n",
+        "SEND_DATE": "01/10/2026 10:41"
+      },
+      {
+        "IS_READ": 0,
+        "ID_TYPE_NOTIF_READ": 3,
+        "ID_NOTIFICATIONS": 578353,
+        "SENDER": "Agent MAIRIE",
+        "ID_LOG_NOTIF_READ": -1,
+        "SUBJECT": "Grève du mardi 29 Septembre",
+        "PAGE": 1,
+        "COUNT": 151,
+        "BODY": "<p>Ch&egrave;res familles,</p>\n<p>Texte du message.</p>\n",
+        "SEND_DATE": "25/09/2026 20:37"
+      }
+    ],
+    "moreInfo": null
+  },
+  "ERROR": null,
+  "TYPE_RESULT": 1
+}

@@ -311,7 +311,7 @@ test('with only the requests captured so far, the integration works', async (t) 
   const message = ack.data.message ?? ack.data;
   assert.match(message.fr, /Enfants : Enfant 101, Enfant 102/);
   assert.match(message.fr, /1 facture\(s\) à payer/);
-  assert.match(message.fr, /Messages : pas encore lus/);
+  assert.match(message.fr, /1 message\(s\) non lu\(s\)/);
 });
 
 test('without the children request, the children come from the planning', async (t) => {

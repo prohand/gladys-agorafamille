@@ -140,11 +140,21 @@ const FIELDS = {
   ],
   paid: ['payee', 'estPayee', 'paid', 'isPaid', 'reglee', 'soldee'],
   invoiceStatus: ['etat', 'statut', 'status', 'state'],
-  messageId: ['idMessage', 'id_message', 'idNotification', 'id'],
+  // The API (October 2026): `{ DATA: { count, data: [{ ID_NOTIFICATIONS,
+  // SUBJECT, SENDER, SEND_DATE: "16/10/2026 09:58", IS_READ, BODY }] } }`.
+  messageId: ['ID_NOTIFICATIONS', 'idMessage', 'id_message', 'idNotification', 'id'],
   subject: ['objet', 'sujet', 'subject', 'titre', 'title', 'libelle'],
   sender: ['expediteur', 'auteur', 'emetteur', 'from', 'sender', 'service'],
-  messageDate: ['dateEnvoi', 'date_envoi', 'dateCreation', 'date', 'sentAt', 'createdAt'],
-  read: ['lu', 'estLu', 'read', 'isRead', 'luLe'],
+  messageDate: [
+    'SEND_DATE',
+    'dateEnvoi',
+    'date_envoi',
+    'dateCreation',
+    'date',
+    'sentAt',
+    'createdAt',
+  ],
+  read: ['IS_READ', 'lu', 'estLu', 'read', 'isRead', 'luLe'],
 };
 
 /**

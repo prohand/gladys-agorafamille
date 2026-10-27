@@ -22,8 +22,9 @@ Release.
 - The planning is asked with the request of the portal (`API_CALENDAR_COMPONENT/events`), for
   the children found in the sign-in answer.
 - The invoices are read with the request of the portal (`API_DASHBOARD/invoicesAgpGrid`):
-  amount, amount paid, due date, state. Messages, whose request is not known yet, are "not read
-  yet", not a failure.
+  amount, amount paid, due date, state.
+- The messages are read with the request of the portal (`API_DASHBOARD/emailLogs`): the last
+  ten, with their subject, sender, date and whether they were read.
 - An **Agora Famille** account device (balance due, next invoice, last message) and one device
   per child (today's and tomorrow's bookings, canteen today and tomorrow).
 - Scene triggers: a new invoice, an invoice due soon, a message received, a booking that

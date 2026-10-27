@@ -238,3 +238,33 @@ test('the invoices of the API (DATA.data) are read', async () => {
   assert.equal(invoices[0].label, 'Facturation periscolaire Octobre 2026');
   assert.equal(invoices[0].issuedOn, '2026-10-01');
 });
+
+test('the messages of the API (DATA.data) are read', async () => {
+  // Shape captured from a real portal (October 2026), senders and bodies replaced.
+  const payload = JSON.parse(
+    await readFile(new URL('./fixtures/messages.json', import.meta.url), 'utf8'),
+  );
+  assert.deepEqual(parseMessages(payload), [
+    {
+      id: '597405',
+      subject: 'Animations de la Toussaint à la piscine',
+      sender: 'Agent  MAIRIE',
+      date: '2026-10-16',
+      read: false,
+    },
+    {
+      id: '586376',
+      subject: 'Facturation restauration scolaire Septembre 2026',
+      sender: 'Agent MAIRIE',
+      date: '2026-10-01',
+      read: true,
+    },
+    {
+      id: '578353',
+      subject: 'Grève du mardi 29 Septembre',
+      sender: 'Agent MAIRIE',
+      date: '2026-09-25',
+      read: false,
+    },
+  ]);
+});

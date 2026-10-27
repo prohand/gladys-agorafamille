@@ -194,3 +194,9 @@ test('the invoices are asked the way the portal pages ask them', async () => {
   assert.equal(request.url, `${BASE}/InternalApi/API_DASHBOARD/invoicesAgpGrid?state=all`);
   assert.equal(request.headers.session_id, 's1');
 });
+
+test('the messages are asked the way the portal pages ask them', async () => {
+  const portal = createFakePortal();
+  await clientFor(portal).getMessages();
+  assert.equal(portal.requests.at(-1).url, `${BASE}/InternalApi/API_DASHBOARD/emailLogs/0/1`);
+});
