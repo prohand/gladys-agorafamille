@@ -59,6 +59,26 @@ test('an expired session is renewed once, transparently', async () => {
   assert.equal(portal.requests.filter((r) => r.path === ENDPOINTS.login.path).length, 2);
 });
 
+test('a refused login says why in the logs, secrets masked', async (t) => {
+  const portal = createFakePortal();
+  const client = clientFor(portal, { password: 'wrong' });
+  const lines = [];
+  t.mock.method(console, 'error', (...args) => lines.push(args.join(' ')));
+  const level = process.env.LOG_LEVEL;
+  process.env.LOG_LEVEL = 'info';
+  t.after(() => {
+    if (level === undefined) {
+      delete process.env.LOG_LEVEL;
+    } else {
+      process.env.LOG_LEVEL = level;
+    }
+  });
+  await assert.rejects(client.getChildren(), { code: ERROR_CODES.AUTH });
+  const line = lines.find((entry) => entry.includes('Login refused'));
+  assert.match(line, /SUCCESS=false, MESSAGE="Identifiants incorrects"/);
+  assert.ok(!line.includes('wrong'));
+});
+
 test('wrong credentials are an auth error, without retrying forever', async () => {
   const portal = createFakePortal();
   const client = clientFor(portal, { password: 'wrong' });

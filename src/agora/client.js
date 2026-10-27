@@ -92,6 +92,7 @@ export class AgoraClient {
       step: 'login',
     });
     if (response.status === 401 || response.status === 403) {
+      await this.logAnswer(ENDPOINTS.login, response);
       throw new AgoraError(ERROR_CODES.AUTH, 'The portal refused the login or password', {
         status: response.status,
         step: 'login',
@@ -107,6 +108,12 @@ export class AgoraClient {
     // A refused login may answer 200 too, with a message: read it when it is JSON.
     const answer = await readJson(response).catch(() => null);
     if (answer && isFailure(answer)) {
+      // What made it a refusal, for whoever adapts the integration: the
+      // status fields and the message, never the rest of the answer.
+      logger.warn(
+        `Login refused (HTTP ${response.status}): ${this.mask(describeStatus(answer))}; ` +
+          `answer fields: ${keyPaths(answer).join(', ') || 'none'}`,
+      );
       throw new AgoraError(ERROR_CODES.AUTH, 'The portal refused the login or password', {
         status: response.status,
         step: 'login',
@@ -341,16 +348,23 @@ export class AgoraClient {
     } catch {
       // No body to show.
     }
-    for (const secret of [this.password, this.username]) {
-      if (secret) {
-        excerpt = excerpt.split(secret).join('***');
-      }
-    }
+    excerpt = this.mask(excerpt);
     logger.warn(
       `${endpoint.method} ${this.base}/${endpoint.path} -> HTTP ${response.status} ` +
         `(${response.headers.get('content-type') ?? 'no content type'}): ` +
         `${excerpt.slice(0, 300) || '(empty answer)'}`,
     );
+  }
+
+  /** A text with the login and the password replaced by `***`. */
+  mask(text) {
+    let masked = String(text);
+    for (const secret of [this.password, this.username]) {
+      if (secret) {
+        masked = masked.split(secret).join('***');
+      }
+    }
+    return masked;
   }
 
   keepCookies(response) {
@@ -410,6 +424,19 @@ function failureMessage(answer) {
     field(answer, 'error') ??
     field(answer, 'errormessage');
   return typeof message === 'string' && message.trim() ? message.trim().slice(0, 200) : null;
+}
+
+/** The fields of an answer that say how it went, with their values. */
+const STATUS_FIELDS =
+  /^(success|ok|result|status|type_?result|error|erreur|errormessage|message|code)$/i;
+
+function describeStatus(answer) {
+  const parts = Object.entries(answer)
+    .filter(
+      ([key, value]) => STATUS_FIELDS.test(key) && (value === null || typeof value !== 'object'),
+    )
+    .map(([key, value]) => `${key}=${JSON.stringify(value)?.slice(0, 200)}`);
+  return parts.join(', ') || 'no status field';
 }
 
 /** A top-level field of an object, whatever the case of its name. */
