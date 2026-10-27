@@ -93,6 +93,7 @@ export class AgoraClient {
     });
     if (response.status === 401 || response.status === 403) {
       await this.logAnswer(ENDPOINTS.login, response);
+      logger.warn(`Login refused: ${this.describeCredentials()}`);
       throw new AgoraError(ERROR_CODES.AUTH, 'The portal refused the login or password', {
         status: response.status,
         step: 'login',
@@ -112,7 +113,7 @@ export class AgoraClient {
       // status fields and the message, never the rest of the answer.
       logger.warn(
         `Login refused (HTTP ${response.status}): ${this.mask(describeStatus(answer))}; ` +
-          `answer fields: ${keyPaths(answer).join(', ') || 'none'}`,
+          `answer fields: ${keyPaths(answer).join(', ') || 'none'}; ${this.describeCredentials()}`,
       );
       throw new AgoraError(ERROR_CODES.AUTH, 'The portal refused the login or password', {
         status: response.status,
@@ -354,6 +355,19 @@ export class AgoraClient {
         `(${response.headers.get('content-type') ?? 'no content type'}): ` +
         `${excerpt.slice(0, 300) || '(empty answer)'}`,
     );
+  }
+
+  /**
+   * What was sent, without sending it to the logs: lengths, and whether the
+   * values carry spaces at their ends or look like a mask (`****`). Enough
+   * to see a password Gladys did not hand over, nothing to sign in with.
+   */
+  describeCredentials() {
+    const describe = (value) =>
+      `${value.length} characters` +
+      (value !== value.trim() ? ', spaces at the ends' : '') +
+      (/^[*•●]+$/.test(value) ? ', looks masked' : '');
+    return `login: ${describe(this.username)}, password: ${describe(this.password)}`;
   }
 
   /** A text with the login and the password replaced by `***`. */
