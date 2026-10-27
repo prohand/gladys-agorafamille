@@ -98,7 +98,9 @@ export function describeError(error) {
             de: 'Das Portal hat etwas Unerwartetes geantwortet',
             es: 'El portal respondió algo inesperado',
           }) +
-          `${where(language)}${status}. ` +
+          `${where(language)}${status}` +
+          (error?.portalMessage ? ` : « ${error.portalMessage} »` : '') +
+          '. ' +
           pick(language, {
             en: 'See the integration logs.',
             fr: "Consultez les logs de l'intégration.",

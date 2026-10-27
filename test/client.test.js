@@ -224,3 +224,31 @@ test('the messages are asked the way the portal pages ask them', async () => {
   await clientFor(portal).getMessages();
   assert.equal(portal.requests.at(-1).url, `${BASE}/InternalApi/API_DASHBOARD/emailLogs/0/1`);
 });
+
+test('the requests carry a French language and name the integration', async () => {
+  const portal = createFakePortal();
+  await clientFor(portal).getInvoices();
+  for (const request of portal.requests) {
+    assert.equal(request.headers['accept-language'], 'fr-FR,fr;q=0.9');
+    assert.match(request.headers['user-agent'], /^gladys-agorafamille /);
+  }
+});
+
+test('an exception of the portal is not called a wrong password', async () => {
+  const portal = createFakePortal();
+  const client = clientFor(portal);
+  client.fetch = async () =>
+    new Response(
+      JSON.stringify({
+        DATA: null,
+        ERROR: { ID: '1', MESSAGE: 'Exception detected' },
+        TYPE_RESULT: -2,
+      }),
+      { headers: { 'content-type': 'application/json' } },
+    );
+  await assert.rejects(client.getChildren(), {
+    code: ERROR_CODES.FORMAT,
+    step: 'login',
+    portalMessage: 'Exception detected',
+  });
+});

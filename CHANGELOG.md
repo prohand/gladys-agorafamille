@@ -32,7 +32,9 @@ Release.
 - Scene actions: read the portal, check a child's day, declare an absence, book a day.
 - **Agora Famille** dashboard widget: balance, children today and tomorrow, invoices to pay,
   unread messages, absence and lunch forms, link to the portal.
-- "Test the connection" action naming the step that fails.
+- "Test the connection" action naming the step that fails, with the portal's own message.
+- Requests are sent with a French `Accept-Language` and a `User-Agent` naming the integration:
+  with Node's defaults, the portal answered the sign-in with "Exception detected".
 - A request the portal refuses logs its address, its HTTP status and the start of the answer
   (login and password masked), to adapt the portal requests.
 - Cloud transport badge on every device, unreachable while the portal cannot be read.

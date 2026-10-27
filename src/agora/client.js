@@ -18,6 +18,13 @@ import { parseChildren, parseInvoices, parseMessages, parsePlanning } from './pa
 
 const logger = createLogger({ name: 'agora' });
 
+/** The language the portal pages ask in (a French portal, French texts). */
+export const ACCEPT_LANGUAGE = 'fr-FR,fr;q=0.9';
+
+/** Who is asking: this integration, not a browser it would pretend to be. */
+export const USER_AGENT =
+  'gladys-agorafamille (Gladys Assistant integration; +https://github.com/prohand/gladys-agorafamille)';
+
 /** A slow portal is common at 8 a.m. on a school day; past this, it is down. */
 export const REQUEST_TIMEOUT_MS = 20_000;
 
@@ -117,11 +124,22 @@ export class AgoraClient {
         `Login refused (HTTP ${response.status}): ${this.mask(describeStatus(answer))}; ` +
           `answer fields: ${keyPaths(answer).join(', ') || 'none'}; ${this.describeCredentials()}`,
       );
-      throw new AgoraError(ERROR_CODES.AUTH, 'The portal refused the login or password', {
-        status: response.status,
-        step: 'login',
-        portalMessage: this.mask(failureMessage(answer) ?? '') || null,
-      });
+      const portalMessage = this.mask(failureMessage(answer) ?? '') || null;
+      // "Exception detected" is the portal failing on the request, not a
+      // verdict on the password: saying "wrong password" sent the user
+      // checking a password that was right.
+      const aboutCredentials =
+        !portalMessage ||
+        /identifiant|mot de passe|login|password|incorrect|invalide|invalid|compte|account/i.test(
+          portalMessage,
+        );
+      throw new AgoraError(
+        aboutCredentials ? ERROR_CODES.AUTH : ERROR_CODES.FORMAT,
+        aboutCredentials
+          ? 'The portal refused the login or password'
+          : `The portal failed on the login: ${portalMessage}`,
+        { status: response.status, step: 'login', portalMessage },
+      );
     }
     // The names of the answer's fields, never their values: what is needed to
     // adapt the integration to the portal, and nothing of the family's data.
@@ -297,6 +315,12 @@ export class AgoraClient {
     // The headers the portal pages send: `null` (as text) before the login.
     const headers = {
       accept: 'application/json, text/plain, */*',
+      // Node's fetch sends `accept-language: *` and `user-agent: node` by
+      // default; the API answered "Exception detected" to the login with
+      // them. The language is the one of the portal; the user agent says
+      // honestly who is asking.
+      'accept-language': ACCEPT_LANGUAGE,
+      'user-agent': USER_AGENT,
       session_id: this.sessionId ?? 'null',
       ref_year: this.refYear ?? 'null',
       a_access: API_ACCESS,
