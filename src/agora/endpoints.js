@@ -52,11 +52,18 @@ export const ENDPOINTS = {
     passwordEncoding: 'base64',
   },
   /**
-   * The children of the family. No request of their own: the portal pages
-   * read them in the menu of the sign-in answer (`kids/<id>` links, see
-   * childrenOfMenus in client.js).
+   * The children of the family, as the reservation calendar lists them
+   * (pck_calendar_comp.agoraplus_calendar_service.getTargets, October 2026):
+   * GET /InternalApi/API_CALENDAR_COMPONENT/target/?idContext=1&idFamily=
+   * Answers `{ DATA: { TARGETS: [{ ID: "<id>$0", NAME, LAST_NAME,
+   * HAS_SCHOOL_REG, IS_ACTIVE }] } }`. When it gives nothing, the children
+   * are read in the menu of the sign-in answer (`kids/<id>` links).
    */
-  children: { method: 'GET', path: null },
+  children: {
+    method: 'GET',
+    path: 'InternalApi/API_CALENDAR_COMPONENT/target/',
+    params: { idContext: '1', idFamily: '' },
+  },
   /**
    * The planning of the children over a window of days. Captured from the
    * portal (October 2026):
@@ -99,10 +106,27 @@ export const ENDPOINTS = {
     path: 'InternalApi/API_DASHBOARD/emailLogs/0/1',
     body: { order: 'SEND_DATE DESC', limit: 10, page: 1, filter: '%' },
   },
-  /** Ask to book one day of an activity. Not captured yet. */
-  reserve: { method: 'POST', path: null },
-  /** Ask to cancel one booked day of an activity. Not captured yet. */
-  absence: { method: 'POST', path: null },
+  /**
+   * Book or cancel days, one request for both, as the reservation calendar
+   * does (agoraplus_calendar_service.bookActivities and
+   * reservations_area_controller.getDataToBook, October 2026):
+   * POST /InternalApi/API_CALENDAR_COMPONENT/booking/?idContext=1&lang=fr
+   * with `[{ IdInscription, Day: "dd/mm/yyyy", IdDefTarif, IsMajored,
+   * DeleteBasketEvent }]`. A booking sends the day's only rate in
+   * IdDefTarif; a cancellation sends -1, and DeleteBasketEvent 1 for a
+   * basket day. Answers `{ TYPE_RESULT, DATA: { outputInfo: { BookingInfo,
+   * ProviderInfo } } }`; a ProviderInfo.Url means an online payment.
+   */
+  reserve: {
+    method: 'POST',
+    path: 'InternalApi/API_CALENDAR_COMPONENT/booking/',
+    params: { idContext: '1', lang: 'fr' },
+  },
+  absence: {
+    method: 'POST',
+    path: 'InternalApi/API_CALENDAR_COMPONENT/booking/',
+    params: { idContext: '1', lang: 'fr' },
+  },
 };
 
 /** The portal pages a person opens, for the links of the widget and the docs. */

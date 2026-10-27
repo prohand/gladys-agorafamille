@@ -106,6 +106,12 @@ behält das letzte Lesen in `/data`).
 Die Anfragen laufen über das Portal: Die Gemeinde bestätigt sie nach ihren
 eigenen Fristen. Der Auslöser „Eine Buchung ändert sich“ meldet ihre Antwort.
 
+Die Integration wendet die Regeln des Portalkalenders an und lehnt mit
+Begründung ab, was das Portal nicht erlauben würde: einen vergangenen Tag,
+geschlossene Buchungen, eine ausgebuchte Aktivität, einen Tag mit mehreren
+wählbaren Tarifen, eine Stornierung mit Aufschlag. Eine online zu bezahlende
+Buchung wird sofort aus dem Warenkorb genommen: im Portal buchen.
+
 ### Beispiele
 
 - **Jeden Abend um 19 Uhr**: _Tag eines Kindes prüfen_ für morgen, dann, wenn

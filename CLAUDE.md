@@ -57,8 +57,8 @@ src/i18n.js, messages.js  { en, fr, de, es } texts
   elsewhere.
 - **The API is `https://<commune>.agoraplus.fr/InternalApi/…`**, not the portal pages host
   (`portalssl.agoraplus.fr/<commune>`): `config.apiBase` vs `config.portalBase`. Sign-in is two
-  requests: `encryptPassword` (`{PASSWORD: btoa(password)}` → the encrypted password in `DATA`,
-  address not captured yet), then `POST InternalApi/API_DASHBOARD/authentication` with JSON
+  requests: `POST InternalApi/API_DASHBOARD/encryptText` with `{text: btoa(password)}` → the
+  encrypted password in `DATA`, then `POST InternalApi/API_DASHBOARD/authentication` with JSON
   `{LOGIN, PASSWORD: <encrypted>}` and headers
   `session_id: null`, `ref_year: null`, `a_access: agora` (captured from a real browser); the
   session id answered goes back in `session_id`. A 401/403 (or a login page / redirect on older
@@ -68,6 +68,11 @@ src/i18n.js, messages.js  { en, fr, de, es } texts
   request before guessing. Lists (invoices, messages) are POSTs of `{order, limit, page,
 filter}`; errors are HTTP 200 with a negative `TYPE_RESULT` and `ERROR.MESSAGE`; children are
   the `kids/<id>` entries of `DATA.MENUS` in the sign-in answer.
+- **Bookings** (`src/agora/booking.js`) follow the rules of the portal's reservation calendar
+  (pck_calendar_comp): one line `{IdInscription, Day, IdDefTarif, IsMajored, DeleteBasketEvent}`
+  to `API_CALENDAR_COMPONENT/booking/`, never retried; a day the calendar would not let a parent
+  book or cancel is refused before anything is sent; a penalty is never accepted on the
+  parent's behalf; a basket to pay online is emptied (`IdDefTarif -1, DeleteBasketEvent 0`).
 - **Data requests not captured yet have `path: null`**: the client signs in, then throws
   `UNMAPPED` naming the step. Never invent a path: capture it ("Copy as cURL" in the browser).
   Tests give them `InternalApi/TEST/<name>` through `useTestPaths()` (test/helpers/fakePortal.js).

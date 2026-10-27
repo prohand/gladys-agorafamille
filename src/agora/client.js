@@ -53,6 +53,8 @@ export class AgoraError extends Error {
     this.step = details.step ?? null;
     // What the portal itself said, when it said something (ERROR.MESSAGE).
     this.portalMessage = details.portalMessage ?? null;
+    // Why a booking was not even sent, `{ en, fr, de, es }` (booking.js).
+    this.reason = details.reason ?? null;
   }
 }
 
@@ -255,7 +257,8 @@ export class AgoraClient {
     if (!ENDPOINTS.children.path && this.menuChildren.length > 0) {
       return this.menuChildren;
     }
-    return parseChildren(await this.call(ENDPOINTS.children, { step: 'children' }));
+    const children = parseChildren(await this.read(ENDPOINTS.children, 'children'));
+    return children.length > 0 ? children : this.menuChildren;
   }
 
   /**
@@ -309,27 +312,33 @@ export class AgoraClient {
     });
   }
 
-  /** Ask to book one day of an activity. Resolves once the portal accepted the request. */
-  async requestReservation({ childId, day, activityId }) {
-    await this.submit(ENDPOINTS.reserve, { childId, day, activityId }, 'reserve');
-  }
-
-  /** Ask to cancel one booked day of an activity. */
-  async requestAbsence({ childId, day, activityId }) {
-    await this.submit(ENDPOINTS.absence, { childId, day, activityId }, 'absence');
-  }
-
-  async submit(endpoint, { childId, day, activityId }, step) {
+  /**
+   * Send one booking line (src/agora/booking.js builds it) to the calendar's
+   * booking request. Resolves the `outputInfo` of the answer (BookingInfo,
+   * ProviderInfo) once the portal accepted it. Never retried: a booking
+   * sent twice is two bookings.
+   *
+   * @param {object} line `{ IdInscription, Day, IdDefTarif, IsMajored, DeleteBasketEvent }`
+   * @param {'reserve'|'absence'} step
+   */
+  async book(line, step) {
+    const endpoint = ENDPOINTS[step];
     const answer = await this.call(endpoint, {
-      body: JSON.stringify({ idEnfant: childId, date: frenchDate(day), idActivite: activityId }),
+      query: endpoint.params,
+      body: JSON.stringify([line]),
       contentType: 'application/json',
       step,
     });
     if (isFailure(answer)) {
-      throw new AgoraError(ERROR_CODES.REFUSED, failureMessage(answer) ?? 'Request declined', {
+      const portalMessage = this.mask(failureMessage(answer) ?? '') || null;
+      logger.warn(`"${step}" refused by the portal: ${this.mask(describeStatus(answer))}`);
+      throw new AgoraError(ERROR_CODES.REFUSED, portalMessage ?? 'Request declined', {
         step,
+        portalMessage,
       });
     }
+    const data = field(answer, 'data');
+    return (data && typeof data === 'object' ? field(data, 'outputinfo') : null) ?? {};
   }
 
   /**

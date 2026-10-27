@@ -38,14 +38,15 @@ export const EXPECTED_STATUSES = [RESERVATION_STATUS.RESERVED, RESERVATION_STATU
 
 const LIST_KEYS = ['data', 'result', 'results', 'items', 'liste', 'list', 'rows', 'content'];
 
-const CHILD_LIST_KEYS = ['enfants', 'children', 'lstEnfants', 'listeEnfants', 'membres'];
+const CHILD_LIST_KEYS = ['TARGETS', 'enfants', 'children', 'lstEnfants', 'listeEnfants', 'membres'];
 const PLANNING_LIST_KEYS = ['events', 'planning', 'reservations', 'presences', 'jours'];
 const INVOICE_LIST_KEYS = ['factures', 'invoices', 'lstFactures', 'listeFactures'];
 const MESSAGE_LIST_KEYS = ['messages', 'notifications', 'lstMessages', 'listeMessages'];
 
 const FIELDS = {
   childId: ['idEnfant', 'id_enfant', 'childId', 'child_id', 'idPersonne', 'id', 'code', 'num'],
-  firstName: ['prenom', 'firstName', 'first_name', 'firstname', 'prenomEnfant'],
+  // The calendar's targets: `NAME` is the first name, next to `LAST_NAME`.
+  firstName: ['prenom', 'firstName', 'first_name', 'firstname', 'prenomEnfant', 'NAME'],
   lastName: ['nom', 'lastName', 'last_name', 'lastname', 'nomEnfant'],
   // `ID_TARGET` is `<person id>$<n>` in the planning of the API (see childOf).
   planningChild: [
@@ -166,14 +167,24 @@ export function parseChildren(payload) {
   const children = [];
   const seen = new Set();
   for (const entry of listOf(payload, CHILD_LIST_KEYS)) {
-    const id = text(first(entry, FIELDS.childId));
+    // The calendar's targets are `<id>$<n>`: the child is the id, the whole
+    // value is what the planning is asked for.
+    const raw = text(first(entry, FIELDS.childId));
+    const id = childOf(raw);
     const firstName = text(first(entry, FIELDS.firstName));
     const lastName = text(first(entry, FIELDS.lastName));
-    if (!id || !firstName || seen.has(id)) {
+    // The calendar lists only the targets whose HAS_SCHOOL_REG is 0 (the
+    // others are not children it books for); kept when the field is absent.
+    const schoolReg = get(entry, 'HAS_SCHOOL_REG');
+    if (!id || !firstName || seen.has(id) || (schoolReg !== undefined && Number(schoolReg) !== 0)) {
       continue;
     }
     seen.add(id);
-    children.push({ id, firstName, lastName, name: firstName });
+    const child = { id, firstName, lastName, name: firstName };
+    if (raw.includes('$')) {
+      child.target = raw;
+    }
+    children.push(child);
   }
   // Two children with the same first name (a blended family) are told apart by
   // their last name, the way the portal itself shows them.
@@ -253,7 +264,12 @@ const REFERENCE_FIELDS = [
   'ID_CALENDAR',
   'ID_TARGET',
   'ID_GROUP',
+  'IS_SELECTED',
   'IS_UNAVAILABLE',
+  'IS_MAJORED',
+  'IS_BASKET',
+  'AVAILABLE_SLOT',
+  'ACT_BLOCK_BY_CRITERIA',
   'PRESENCE_TYPE',
   'PRESENCE_VALUE',
 ];
@@ -272,6 +288,15 @@ function referencesOf(entry) {
     if (value !== undefined && value !== null && typeof value !== 'object') {
       refs[name] = value;
     }
+  }
+  // The rates a booking can name: the calendar drops the first entry of
+  // SUB_EVENT_LIST (a placeholder, ID -1) and books the only one left.
+  const subEvents = get(entry, 'SUB_EVENT_LIST');
+  if (Array.isArray(subEvents)) {
+    refs.SUB_EVENTS = subEvents
+      .slice(1)
+      .map((subEvent) => get(subEvent, 'ID_SUB_EVENT'))
+      .filter((id) => id !== undefined && id !== null);
   }
   return Object.keys(refs).length > 0 ? refs : null;
 }

@@ -11,6 +11,7 @@
 import { createLogger } from '../logging.js';
 import { AgoraClient, AgoraError, ERROR_CODES } from './client.js';
 import { addDays, dayOf } from './dates.js';
+import { BOOKING_REFUSALS, cancellationLine, reservationLine } from './booking.js';
 import { SCENE_TRIGGERS, buildSnapshot, diffSnapshots } from './snapshot.js';
 
 const logger = createLogger({ name: 'sync' });
@@ -42,6 +43,38 @@ export function createAgoraService({ config, store, fetch, now = () => new Date(
   let lastAttemptAt = 0;
   let running = null;
   let loaded = false;
+
+  /** The planning entry a request names, as the last read knows it. */
+  function entryOf({ childId, day, activityId }) {
+    return (
+      snapshot?.planning.find(
+        (entry) =>
+          entry.childId === childId && entry.day === day && entry.activityId === activityId,
+      ) ?? null
+    );
+  }
+
+  /**
+   * Send a booking line. A booking the portal puts in a basket to pay online
+   * (ProviderInfo.Url) cannot be paid from Gladys: the basket is emptied the
+   * way the portal's calendar does when the payment dialog is closed (the
+   * same line, IdDefTarif -1, DeleteBasketEvent 0), and the parent is sent
+   * to the portal.
+   */
+  async function bookLine(line, step) {
+    const outputInfo = await client.book(line, step);
+    const provider = outputInfo?.ProviderInfo ?? outputInfo?.providerInfo;
+    if (provider?.Url) {
+      logger.warn(`"${step}" needs an online payment: emptying the basket`);
+      await client
+        .book({ ...line, IdDefTarif: -1, DeleteBasketEvent: 0 }, step)
+        .catch((err) => logger.error(`Emptying the basket failed: ${err.message}`));
+      throw new AgoraError(ERROR_CODES.REFUSED, BOOKING_REFUSALS.PAYMENT.en, {
+        step,
+        reason: BOOKING_REFUSALS.PAYMENT,
+      });
+    }
+  }
 
   function requireClient() {
     if (!client) {
@@ -165,14 +198,16 @@ export function createAgoraService({ config, store, fetch, now = () => new Date(
     /** Ask the portal to book a day, then read it again to show the result. */
     async requestReservation(request) {
       requireClient();
-      await client.requestReservation(request);
+      const line = reservationLine(entryOf(request), dayOf(now()));
+      await bookLine(line, 'reserve');
       return this.syncAfter(request);
     },
 
     /** Ask the portal to cancel a day, then read it again to show the result. */
     async requestAbsence(request) {
       requireClient();
-      await client.requestAbsence(request);
+      const line = cancellationLine(entryOf(request), dayOf(now()));
+      await bookLine(line, 'absence');
       return this.syncAfter(request);
     },
 

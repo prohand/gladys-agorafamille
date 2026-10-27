@@ -106,6 +106,12 @@ guarda la última lectura en `/data`).
 Las solicitudes pasan por el portal: el municipio las valida según sus
 propios plazos. El disparador «una reserva cambia» le avisa de su respuesta.
 
+La integración aplica las reglas del calendario del portal y rechaza, con el
+motivo, lo que el portal no permitiría: un día pasado, reservas cerradas, una
+actividad completa, un día con varias tarifas a elegir, una cancelación con
+recargo. Una reserva que se paga en línea se retira del carrito enseguida:
+hágala en el portal.
+
 ### Ejemplos
 
 - **Cada tarde a las 19 h**: _Comprobar el día_ de cada niño para mañana y,

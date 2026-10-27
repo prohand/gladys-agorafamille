@@ -107,6 +107,13 @@ Les demandes passent par le portail : c'est la commune qui les valide, selon
 ses délais. Le déclencheur « une réservation change » vous prévient de sa
 réponse.
 
+L'intégration applique les mêmes règles que le calendrier du portail, et
+refuse avec la raison ce que le portail ne laisserait pas faire : un jour
+passé, des réservations fermées, une activité complète, un jour avec
+plusieurs tarifs à choisir, une annulation qui coûte une majoration. Une
+réservation qui se paie en ligne est retirée du panier aussitôt : faites-la
+sur le portail.
+
 ### Exemples
 
 - **Tous les soirs à 19 h** : _Vérifier la journée_ de chaque enfant pour

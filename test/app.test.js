@@ -8,7 +8,13 @@ import { ENDPOINTS } from '../src/agora/endpoints.js';
 import { CHILD_FEATURES, ACCOUNT_FEATURES, accountIds, childIds } from '../src/devices/index.js';
 import { FAMILY_WIDGET, WIDGET_ACTIONS } from '../src/capabilities/widget.js';
 import { SCENE_ACTIONS, SCENE_TRIGGERS } from '../src/capabilities/scenes.js';
-import { CONFIG, createFakePortal, createMemoryStore, useTestPaths } from './helpers/fakePortal.js';
+import {
+  CONFIG,
+  apiDay,
+  createFakePortal,
+  createMemoryStore,
+  useTestPaths,
+} from './helpers/fakePortal.js';
 
 let restorePaths;
 before(() => {
@@ -20,36 +26,14 @@ after(() => restorePaths());
 const NOW = new Date('2026-11-04T09:00:00Z');
 
 function family() {
+  // In the API's own shape. Tom's lunch tomorrow is booked; Léa is
+  // registered for it but has not booked it.
   return createFakePortal({
     planning: [
-      {
-        idEnfant: 101,
-        date: '04/11/2026',
-        libelleActivite: 'Cantine',
-        idActivite: 'CAN',
-        etat: 'Réservé',
-      },
-      {
-        idEnfant: 101,
-        date: '04/11/2026',
-        libelleActivite: 'Garderie soir',
-        idActivite: 'GS',
-        etat: 'Réservé',
-      },
-      {
-        idEnfant: 101,
-        date: '05/11/2026',
-        libelleActivite: 'Cantine',
-        idActivite: 'CAN',
-        etat: 'Inscrit',
-      },
-      {
-        idEnfant: 102,
-        date: '05/11/2026',
-        libelleActivite: 'Cantine',
-        idActivite: 'CAN',
-        etat: 'Demande de réservation',
-      },
+      apiDay({ child: 101, date: '04/11/2026', eventId: 1, selected: 1 }),
+      apiDay({ child: 101, date: '04/11/2026', eventId: 2, group: 'Garderie soir', selected: 1 }),
+      apiDay({ child: 101, date: '05/11/2026', eventId: 1 }),
+      apiDay({ child: 102, date: '05/11/2026', eventId: 1, selected: 1 }),
     ],
     invoices: [
       { numFacture: 'F10', libelle: 'Octobre 2026', montant: '45,20', dateEcheance: '20/11/2026' },
@@ -79,7 +63,10 @@ test('the account and one device per child are published, with their states', as
   const lea = childIds(gladys, config, '101');
   const tom = childIds(gladys, config, '102');
   assert.equal(gladys.fake.lastState(account.feature(ACCOUNT_FEATURES.BALANCE)), 45.2);
-  assert.equal(gladys.fake.lastState(lea.feature(CHILD_FEATURES.TODAY)), 'Cantine, Garderie soir');
+  assert.equal(
+    gladys.fake.lastState(lea.feature(CHILD_FEATURES.TODAY)),
+    'Garderie soir, Restauration scolaire',
+  );
   assert.equal(gladys.fake.lastState(lea.feature(CHILD_FEATURES.TOMORROW)), 'Rien de réservé');
   assert.equal(gladys.fake.lastState(lea.feature(CHILD_FEATURES.MEAL_TODAY)), 1);
   assert.equal(gladys.fake.lastState(lea.feature(CHILD_FEATURES.MEAL_TOMORROW)), 0);
@@ -103,7 +90,8 @@ test('the next read fires the scene triggers of what changed', async (t) => {
     dateEcheance: '06/11/2026',
   });
   portal.messages.push({ idMessage: 2, objet: 'Grève jeudi', expediteur: 'Mairie' });
-  portal.planning[3].etat = 'Refusé';
+  // The municipality cancelled Tom's lunch of tomorrow.
+  portal.planning[3].IS_SELECTED = 0;
 
   const ack = await gladys.fake.sceneAction(SCENE_ACTIONS.REFRESH, {});
   assert.equal(ack.success, true);
@@ -125,7 +113,8 @@ test('the next read fires the scene triggers of what changed', async (t) => {
     (event) => (event.key ?? event.trigger) === SCENE_TRIGGERS.RESERVATION_CHANGED,
   );
   assert.equal(changed.data.device, childIds(gladys, config, '102').device);
-  assert.equal(changed.data.status, 'refused');
+  assert.equal(changed.data.status, 'registered');
+  assert.equal(changed.data.previous_status, 'reserved');
 });
 
 test('a scene declares an absence, and the read that follows fires nothing', async (t) => {
@@ -140,8 +129,16 @@ test('a scene declares an absence, and the read that follows fires nothing', asy
     activity: 'cantine',
   });
   assert.equal(ack.success, true, ack.error);
+  // One line to the calendar's booking request, as its page writes it.
   assert.deepEqual(portal.submitted, [
-    { module: 'absence', idEnfant: '101', date: '04/11/2026', idActivite: 'CAN' },
+    {
+      kind: 'absence',
+      IdInscription: 1101,
+      Day: '04/11/2026',
+      IdDefTarif: -1,
+      IsMajored: false,
+      DeleteBasketEvent: -1,
+    },
   ]);
   assert.equal(gladys.fake.sceneEvents.length, before);
 });
@@ -178,8 +175,16 @@ test('a scene books a lunch on a registered day, and says when it already is', a
     day: 1,
   });
   assert.equal(booked.success, true, booked.error);
+  // The day's only rate (3001) books it.
   assert.deepEqual(portal.submitted, [
-    { module: 'reserve', idEnfant: '101', date: '05/11/2026', idActivite: 'CAN' },
+    {
+      kind: 'reserve',
+      IdInscription: 1101,
+      Day: '05/11/2026',
+      IdDefTarif: 3001,
+      IsMajored: false,
+      DeleteBasketEvent: -1,
+    },
   ]);
 
   const already = await gladys.fake.sceneAction(SCENE_ACTIONS.REQUEST_RESERVATION, {
@@ -204,7 +209,7 @@ test('a scene checks a day', async (t) => {
     date: '2026-11-04',
     has_meal: true,
     booked_count: 2,
-    activities: 'Cantine, Garderie soir',
+    activities: 'Garderie soir, Restauration scolaire',
   });
 });
 
@@ -229,7 +234,10 @@ test('the widget absence form cancels the booked day', async (t) => {
     { settings: {}, values: { child: '101', day: '0' } },
   );
   assert.equal(ack.success, true, ack.error);
-  assert.deepEqual(portal.submitted.map((entry) => entry.idActivite).sort(), ['CAN', 'GS']);
+  assert.deepEqual(portal.submitted.map((entry) => [entry.kind, entry.IdInscription]).sort(), [
+    ['absence', 1101],
+    ['absence', 2101],
+  ]);
 });
 
 test('wrong credentials are said on the Configuration screen', async (t) => {
@@ -365,10 +373,11 @@ test('without menu nor children request, the children come from the planning', a
 });
 
 test('the widget offers no button for a request not captured yet', async (t) => {
-  restorePaths();
-  t.after(() => {
-    restorePaths = useTestPaths();
-  });
+  const paths = { reserve: ENDPOINTS.reserve.path, absence: ENDPOINTS.absence.path };
+  ENDPOINTS.reserve.path = null;
+  ENDPOINTS.absence.path = null;
+  t.after(() => Object.assign(ENDPOINTS.reserve, { path: paths.reserve }));
+  t.after(() => Object.assign(ENDPOINTS.absence, { path: paths.absence }));
   const { gladys, app } = await start();
   t.after(() => app.stop());
   const ack = await gladys.fake.widgetGet(FAMILY_WIDGET, { settings: {}, language: 'fr' });
@@ -377,4 +386,46 @@ test('the widget offers no button for a request not captured yet', async (t) => 
     .filter((component) => component.type === 'button' && component.action)
     .map((component) => component.action.key);
   assert.deepEqual(actions, [WIDGET_ACTIONS.REFRESH]);
+});
+
+test('a booking to pay online is undone, and the parent sent to the portal', async (t) => {
+  const portal = family();
+  const { gladys, app } = await start(portal);
+  t.after(() => app.stop());
+  portal.paymentUrl = 'https://paiement.example/xyz';
+  const ack = await gladys.fake.sceneAction(SCENE_ACTIONS.REQUEST_RESERVATION, {
+    child: childIds(gladys, config, '101').device,
+    day: 1,
+  });
+  assert.equal(ack.success, false);
+  assert.match(ack.error, /paid online/);
+  // Booked, then the basket emptied the way the portal's calendar does.
+  assert.deepEqual(
+    portal.submitted.map((entry) => [entry.kind, entry.IdDefTarif, entry.DeleteBasketEvent]),
+    [
+      ['reserve', 3001, -1],
+      ['basket', -1, 0],
+    ],
+  );
+});
+
+test('a cancellation with a penalty is never sent', async (t) => {
+  const portal = family();
+  portal.planning[0] = apiDay({
+    child: 101,
+    date: '04/11/2026',
+    eventId: 1,
+    selected: 1,
+    majored: 1,
+  });
+  const { gladys, app } = await start(portal);
+  t.after(() => app.stop());
+  const ack = await gladys.fake.sceneAction(SCENE_ACTIONS.DECLARE_ABSENCE, {
+    child: childIds(gladys, config, '101').device,
+    day: 0,
+    activity: 'cantine',
+  });
+  assert.equal(ack.success, false);
+  assert.match(ack.error, /penalty/);
+  assert.deepEqual(portal.submitted, []);
 });

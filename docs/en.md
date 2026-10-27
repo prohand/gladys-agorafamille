@@ -106,6 +106,12 @@ the last read in `/data`).
 Requests go through the portal: the municipality approves them, within its
 own deadlines. The "a booking changes" trigger tells you its answer.
 
+The integration applies the rules of the portal's own calendar, and refuses,
+with the reason, what the portal would not let you do: a past day, closed
+bookings, a full activity, a day with several rates to choose from, a
+cancellation that costs a penalty. A booking paid online is taken out of the
+basket at once: make it on the portal.
+
 ### Examples
 
 - **Every evening at 7 p.m.**: _Check a child's day_ for tomorrow, then, when

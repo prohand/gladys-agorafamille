@@ -207,11 +207,18 @@ test('the planning of the API (DATA.EVENTS) is read', async () => {
       ID_CALENDAR: 9937,
       ID_TARGET: '1001$0',
       ID_GROUP: 99,
+      IS_SELECTED: 0,
       IS_UNAVAILABLE: 0,
+      IS_MAJORED: 0,
+      IS_BASKET: 1,
+      AVAILABLE_SLOT: 0,
+      ACT_BLOCK_BY_CRITERIA: 0,
       PRESENCE_TYPE: 0,
       CAN_SUBSCRIPTION: 0,
       CAN_UNSUBSCRIPTION: 0,
       INSERT_ABSENCE: 0,
+      // SUB_EVENT_LIST without its placeholder (ID -1).
+      SUB_EVENTS: [1442],
     },
   });
   const booked = planning.find((entry) => entry.day === '2026-10-27');

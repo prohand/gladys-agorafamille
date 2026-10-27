@@ -32,6 +32,13 @@ Release.
 - An answer of the portal with a negative `TYPE_RESULT` (its way of saying an error, an expired
   session among them) is no longer read as an empty planning, which showed "nothing booked" for
   every child: the integration signs in again once, then reports the portal's error.
+- Booking and cancelling a day use the request of the portal's reservation calendar
+  (`API_CALENDAR_COMPONENT/booking`), with the calendar's own rules checked first: no past day,
+  no closed booking, no full activity, no day with several rates, no cancellation with a
+  penalty. A booking the portal wants paid online is taken back out of the basket and the
+  parent sent to the portal.
+- The children are the targets of the reservation calendar (`API_CALENDAR_COMPONENT/target`),
+  the sign-in menu remaining the fallback.
 - The widget shows the Absence and "Book a lunch" buttons only once their portal requests are
   known.
 - An **Agora Famille** account device (balance due, next invoice, last message) and one device

@@ -103,7 +103,14 @@ export function describeError(error) {
             fr: 'Le portail a refusé la demande',
             de: 'Das Portal hat die Anfrage abgelehnt',
             es: 'El portal rechazó la solicitud',
-          }) + `${where(language)}${error.message ? `: ${error.message}` : ''}.`,
+          }) +
+          `${where(language)}` +
+          (error.reason
+            ? ` : ${pick(language, error.reason)}`
+            : error.message
+              ? ` : ${error.message}`
+              : '') +
+          '.',
       );
     default:
       return localize(

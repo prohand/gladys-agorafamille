@@ -170,33 +170,63 @@ export function createFakePortal(data = {}) {
     }
     switch (module) {
       case 'children':
-        return json({ enfants: portal.children });
+        // As the calendar's `target/` request answers (October 2026).
+        return json({
+          DATA: {
+            SHOW_ALL: 1,
+            TARGETS: portal.children.map((child) => ({
+              ID: `${child.idEnfant}$0`,
+              NAME: child.prenom,
+              LAST_NAME: child.nom,
+              HAS_SCHOOL_REG: 0,
+              IS_ACTIVE: 1,
+            })),
+          },
+          TYPE_RESULT: 1,
+        });
       case 'planning':
-        return json({ data: { planning: portal.planning } });
+        return json({ DATA: { EVENTS: portal.planning } });
       case 'invoices':
         return json({ factures: portal.invoices });
       case 'messages':
         return json(portal.messages);
       case 'reserve':
-      case 'absence': {
-        const body = JSON.parse(options.body);
-        portal.submitted.push({ module, ...body });
-        // The portal shows the request at once, as pending.
-        for (const entry of portal.planning) {
-          if (
-            String(entry.idEnfant) === body.idEnfant &&
-            entry.date === body.date &&
-            entry.idActivite === body.idActivite
-          ) {
-            entry.etat = module === 'absence' ? "Demande d'absence" : 'Demande de réservation';
-          }
-        }
-        return json({ success: true });
-      }
+      case 'absence':
+        return book(JSON.parse(options.body));
       default:
         return new Response('Not found', { status: 404 });
     }
   };
+
+  // The calendar's booking request: one line per day. A rate books the day,
+  // -1 cancels it, DeleteBasketEvent 0 empties the basket of an unpaid one.
+  function book(lines) {
+    for (const line of lines) {
+      const kind =
+        line.DeleteBasketEvent === 0 ? 'basket' : line.IdDefTarif > 0 ? 'reserve' : 'absence';
+      portal.submitted.push({ kind, ...line });
+      const day = portal.planning.find(
+        (entry) =>
+          entry.ID_INSCRIPTION === line.IdInscription && entry.START_DATE_TIME.startsWith(line.Day),
+      );
+      if (day && kind === 'reserve' && !portal.paymentUrl) {
+        day.IS_SELECTED = 1;
+      }
+      if (day && kind === 'absence') {
+        day.IS_SELECTED = 0;
+      }
+    }
+    return json({
+      DATA: {
+        outputInfo: {
+          BookingInfo: [],
+          ProviderInfo: { Url: portal.paymentUrl ?? '', Name: '', Token: '' },
+        },
+      },
+      ERROR: {},
+      TYPE_RESULT: 1,
+    });
+  }
 
   return portal;
 }
@@ -206,6 +236,55 @@ function json(payload) {
     status: 200,
     headers: { 'content-type': 'application/json' },
   });
+}
+
+/**
+ * One day of the calendar's planning, in the API's own shape
+ * (`DATA.EVENTS[]` of API_CALENDAR_COMPONENT/events, October 2026).
+ */
+export function apiDay({
+  child,
+  date,
+  group = 'Restauration scolaire',
+  eventId = 1,
+  inscription,
+  selected = 0,
+  canSubscribe = 1,
+  canUnsubscribe = 1,
+  majored = 0,
+  basket = 0,
+  slots = 10,
+  rates = [3001],
+}) {
+  return {
+    ID_EVENT: eventId,
+    DESCRIPTION: `${group} - Testville`,
+    START_DATE_TIME: `${date} 08:00:00`,
+    END_DATE_TIME: `${date} 18:00:00`,
+    IS_SELECTED: selected,
+    IS_UNAVAILABLE: 0,
+    AVAILABLE_SLOT: slots,
+    NAME_GROUP: group,
+    DAILY_ROULES_OBJ: {
+      CAN_SUBSCRIPTION: canSubscribe,
+      CAN_UNSUBSCRIPTION: canUnsubscribe,
+      IS_MAJORED: majored,
+      INSERT_ABSENCE: 0,
+    },
+    SUB_EVENT_LIST: [
+      { ID_SUB_EVENT: -1, DESC_SUB_EVENT: null, PRICE: -1 },
+      ...rates.map((rate) => ({ ID_SUB_EVENT: rate, DESC_SUB_EVENT: 'Repas', PRICE: '3,5 ' })),
+    ],
+    ID_INSCRIPTION: inscription ?? eventId * 1000 + Number(child),
+    ID_TARGET: `${child}$0`,
+    ID_CALENDAR: 1,
+    IS_MAJORED: majored,
+    IS_BASKET: basket,
+    PRESENCE_TYPE: 0,
+    PRESENCE_VALUE: null,
+    ID_TYPE_TARGET: 0,
+    ACT_BLOCK_BY_CRITERIA: 0,
+  };
 }
 
 /** An in-memory store, standing in for /data. */
