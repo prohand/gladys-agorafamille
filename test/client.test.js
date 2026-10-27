@@ -390,3 +390,41 @@ test('only kids/<id> menu entries are children', () => {
   ]);
   assert.deepEqual(childrenOfMenus({ DATA: null }), []);
 });
+
+test('a successful sign-in with an empty ERROR is a success (as the portal answers it)', async () => {
+  const portal = createFakePortal();
+  const client = clientFor(portal);
+  const original = portal.fetch;
+  client.fetch = async (url, options) => {
+    const response = await original(url, options);
+    if (!String(url).endsWith(ENDPOINTS.login.path)) {
+      return response;
+    }
+    // The real answer, October 2026: TYPE_RESULT "1" (a string) and ERROR {}.
+    const answer = await response.json();
+    return new Response(JSON.stringify({ ...answer, TYPE_RESULT: '1', ERROR: {} }), {
+      headers: { 'content-type': 'application/json' },
+    });
+  };
+  const children = await client.getChildren();
+  assert.equal(client.signedIn, true);
+  assert.equal(children.length, 2);
+});
+
+test('TYPE_RESULT 0 with "Exception detected" is a failure of the portal', async () => {
+  const portal = createFakePortal();
+  const client = clientFor(portal);
+  client.fetch = passEncryption(
+    portal,
+    () =>
+      new Response(
+        JSON.stringify({
+          DATA: null,
+          TYPE_RESULT: '0',
+          ERROR: { ID: '-2', MESSAGE: 'Exception detected' },
+        }),
+        { headers: { 'content-type': 'application/json' } },
+      ),
+  );
+  await assert.rejects(client.getChildren(), { code: ERROR_CODES.FORMAT, step: 'login' });
+});

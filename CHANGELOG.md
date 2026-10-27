@@ -47,6 +47,8 @@ Release.
   detected"): `API_DASHBOARD/encryptText`, then `authentication`, as read in the portal's code;
   the session id and school year come from `DATA.session`. A staff account
   (`USER_TYPE_ID` 1) is turned away, as the portal does.
+- A successful sign-in is no longer taken for a refusal: the portal says how a request went in
+  `TYPE_RESULT` only (positive: done), and its successful answer carries an empty `ERROR`.
 - Requests are sent with a French `Accept-Language` and a `User-Agent` naming the integration.
 - A request the portal refuses logs its address, its HTTP status and the start of the answer
   (login and password masked), to adapt the portal requests.

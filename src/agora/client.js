@@ -419,8 +419,9 @@ export class AgoraClient {
     // tried again once with a fresh session; a request (a booking) is not,
     // its refusal is the caller's to report.
     if (endpoint.method === 'GET' || options.read) {
-      const typeResult = Number(field(answer, 'type_result'));
-      if (Number.isFinite(typeResult) && typeResult < 0) {
+      const raw = field(answer, 'type_result');
+      const typeResult = Number(raw);
+      if (raw !== undefined && raw !== null && raw !== '' && typeResult <= 0) {
         this.signedIn = false;
         throw new SessionExpired(answer);
       }
@@ -571,19 +572,39 @@ function isFailure(answer) {
     return false;
   }
   const value = (name) => field(answer, name);
-  if ([value('success'), value('ok'), value('result')].includes(false)) {
-    return true;
-  }
-  // The API answers TYPE_RESULT 1 when it went well, a negative one otherwise.
+  // The API says how it went in TYPE_RESULT, and the portal's own code
+  // reads nothing else: positive went well, 0 or negative did not. Its
+  // successful sign-in carries an empty ERROR object, which the checks below
+  // took for a refusal.
   const typeResult = Number(value('type_result'));
-  if (Number.isFinite(typeResult) && typeResult < 0) {
+  if (
+    value('type_result') !== undefined &&
+    value('type_result') !== null &&
+    Number.isFinite(typeResult)
+  ) {
+    return typeResult <= 0;
+  }
+  if ([value('success'), value('ok'), value('result')].includes(false)) {
     return true;
   }
   const status = value('status');
   if (typeof status === 'string' && /^(ko|error|erreur)$/i.test(status)) {
     return true;
   }
-  return Boolean(value('erreur') || value('error') || value('errormessage'));
+  return [value('erreur'), value('error'), value('errormessage')].some(isSaid);
+}
+
+/** An error worth the name: a text, or an object carrying one (not `{}`). */
+function isSaid(error) {
+  if (error === null || error === undefined || error === '' || error === false) {
+    return false;
+  }
+  if (typeof error === 'object') {
+    return Object.values(error).some(
+      (part) => part !== null && part !== undefined && part !== '' && typeof part !== 'object',
+    );
+  }
+  return true;
 }
 
 function failureMessage(answer) {
