@@ -240,7 +240,10 @@ test('wrong credentials are said on the Configuration screen', async (t) => {
 
   assert.equal(gladys.fake.connectionStatus.connected, false);
   const ack = await gladys.fake.action('test_connection', {});
-  assert.match(ack.data.fr ?? ack.data.message?.fr ?? JSON.stringify(ack.data), /refusé/);
+  const answer = ack.data.message ?? ack.data;
+  assert.match(answer.fr, /refusé/);
+  // The portal's own words reach the Configuration screen.
+  assert.match(answer.fr, /« Identifiant ou mot de passe incorrect »/);
   // The account device is still there: the user can create it before fixing.
   assert.equal(gladys.fake.discoveredDevices.length, 1);
 });

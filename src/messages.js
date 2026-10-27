@@ -47,7 +47,10 @@ export function describeError(error) {
             fr: "Le portail a refusé l'identifiant ou le mot de passe",
             de: 'Das Portal hat Benutzername oder Passwort abgelehnt',
             es: 'El portal rechazó el usuario o la contraseña',
-          }) + `${where(language)}.`,
+          }) +
+          `${where(language)}` +
+          // The portal's own words, in French whatever the reader's language.
+          (error.portalMessage ? ` : « ${error.portalMessage} ».` : '.'),
       );
     case ERROR_CODES.NETWORK:
       return localize(

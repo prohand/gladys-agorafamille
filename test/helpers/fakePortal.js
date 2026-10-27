@@ -92,7 +92,12 @@ export function createFakePortal(data = {}) {
         body[ENDPOINTS.login.fields.username] !== portal.username ||
         body[ENDPOINTS.login.fields.password] !== portal.password
       ) {
-        return json({ SUCCESS: false, MESSAGE: 'Identifiants incorrects' });
+        // As the real API refuses (October 2026).
+        return json({
+          DATA: null,
+          ERROR: { ID: 12, MESSAGE: 'Identifiant ou mot de passe incorrect' },
+          TYPE_RESULT: -2,
+        });
       }
       sessionCounter += 1;
       const id = `s${sessionCounter}`;

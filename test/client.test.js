@@ -75,7 +75,10 @@ test('a refused login says why in the logs, secrets masked', async (t) => {
   });
   await assert.rejects(client.getChildren(), { code: ERROR_CODES.AUTH });
   const line = lines.find((entry) => entry.includes('Login refused'));
-  assert.match(line, /SUCCESS=false, MESSAGE="Identifiants incorrects"/);
+  assert.match(
+    line,
+    /TYPE_RESULT=-2, ERROR\.ID=12, ERROR\.MESSAGE="Identifiant ou mot de passe incorrect"|ERROR\.ID=12, ERROR\.MESSAGE="Identifiant ou mot de passe incorrect", TYPE_RESULT=-2/,
+  );
   assert.match(line, /login: 18 characters, password: 5 characters/);
   assert.ok(!line.includes('wrong'));
 });

@@ -44,6 +44,8 @@ export class AgoraError extends Error {
     this.code = code;
     this.status = details.status ?? null;
     this.step = details.step ?? null;
+    // What the portal itself said, when it said something (ERROR.MESSAGE).
+    this.portalMessage = details.portalMessage ?? null;
   }
 }
 
@@ -118,6 +120,7 @@ export class AgoraClient {
       throw new AgoraError(ERROR_CODES.AUTH, 'The portal refused the login or password', {
         status: response.status,
         step: 'login',
+        portalMessage: this.mask(failureMessage(answer) ?? '') || null,
       });
     }
     // The names of the answer's fields, never their values: what is needed to
@@ -424,6 +427,11 @@ function isFailure(answer) {
   if ([value('success'), value('ok'), value('result')].includes(false)) {
     return true;
   }
+  // The API answers TYPE_RESULT 1 when it went well, a negative one otherwise.
+  const typeResult = Number(value('type_result'));
+  if (Number.isFinite(typeResult) && typeResult < 0) {
+    return true;
+  }
   const status = value('status');
   if (typeof status === 'string' && /^(ko|error|erreur)$/i.test(status)) {
     return true;
@@ -432,10 +440,12 @@ function isFailure(answer) {
 }
 
 function failureMessage(answer) {
+  // The API nests it: `{ ERROR: { ID, MESSAGE }, TYPE_RESULT: -2 }`.
+  const error = field(answer, 'error');
   const message =
     field(answer, 'message') ??
     field(answer, 'erreur') ??
-    field(answer, 'error') ??
+    (error && typeof error === 'object' ? field(error, 'message') : error) ??
     field(answer, 'errormessage');
   return typeof message === 'string' && message.trim() ? message.trim().slice(0, 200) : null;
 }
@@ -444,13 +454,22 @@ function failureMessage(answer) {
 const STATUS_FIELDS =
   /^(success|ok|result|status|type_?result|error|erreur|errormessage|message|code)$/i;
 
-function describeStatus(answer) {
-  const parts = Object.entries(answer)
-    .filter(
-      ([key, value]) => STATUS_FIELDS.test(key) && (value === null || typeof value !== 'object'),
-    )
-    .map(([key, value]) => `${key}=${JSON.stringify(value)?.slice(0, 200)}`);
-  return parts.join(', ') || 'no status field';
+function describeStatus(answer, prefix = '', depth = 0) {
+  const parts = [];
+  for (const [key, value] of Object.entries(answer)) {
+    if (!STATUS_FIELDS.test(key) && !/^id$/i.test(key)) {
+      continue;
+    }
+    if (value === null || typeof value !== 'object') {
+      if (prefix || !/^id$/i.test(key)) {
+        parts.push(`${prefix}${key}=${JSON.stringify(value)?.slice(0, 200)}`);
+      }
+    } else if (!Array.isArray(value) && depth === 0) {
+      // `ERROR: { ID, MESSAGE }`: what the portal says is one level down.
+      parts.push(describeStatus(value, `${key}.`, depth + 1));
+    }
+  }
+  return parts.filter(Boolean).join(', ') || (depth === 0 ? 'no status field' : '');
 }
 
 /** A top-level field of an object, whatever the case of its name. */
