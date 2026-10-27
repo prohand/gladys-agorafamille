@@ -39,7 +39,7 @@ export const ENDPOINTS = {
    * The planning of the children over a window of days. Captured from the
    * portal (October 2026):
    * GET /InternalApi/API_CALENDAR_COMPONENT/events/?idContext=1
-   *     &targets=4412$0,9268$0&startDate=26/10/2026&endDate=01/11/2026
+   *     &targets=1001$0,1002$0&startDate=26/10/2026&endDate=01/11/2026
    * `targets` are the children (`<person id>$0`), dates are dd/mm/yyyy.
    * Answers `{ DATA: { EVENTS: [...] } }` (see src/agora/parse.js).
    */

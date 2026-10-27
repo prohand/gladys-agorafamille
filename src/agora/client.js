@@ -120,7 +120,7 @@ export class AgoraClient {
       response.headers.get('session-id') ??
       findValue(answer, /^(session_?id|sessionid|id_?session|token|access_?token)$/i);
     this.refYear = findValue(answer, /^(ref_?year|annee_?ref(erence)?|current_?year)$/i);
-    // The children of the account, as the planning names them (`4412$0`),
+    // The children of the account, as the planning names them (`1001$0`),
     // when the login answer carries them.
     this.targets = collectTargets(answer);
     if (!this.sessionId && this.cookies.size === 0) {
@@ -276,7 +276,7 @@ export class AgoraClient {
 
   async send(endpoint, { query, body, contentType, step }) {
     // The query is written the way the portal pages write it: `$`, `,` and
-    // `/` as they are (`targets=4412$0,9268$0&startDate=26/10/2026`).
+    // `/` as they are (`targets=1001$0,1002$0&startDate=26/10/2026`).
     const search = Object.entries(query ?? {})
       .map(([name, value]) => `${encodeQuery(name)}=${encodeQuery(value)}`)
       .join('&');

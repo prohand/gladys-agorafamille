@@ -215,7 +215,7 @@ export function parsePlanning(payload, children = []) {
   return entries.sort((a, b) => a.day.localeCompare(b.day) || a.activity.localeCompare(b.activity));
 }
 
-/** `4412$0` → `4412`: the person the API's `ID_TARGET` points at. */
+/** `1001$0` → `1001`: the person the API's `ID_TARGET` points at. */
 function childOf(value) {
   const id = text(value);
   return id ? id.split('$')[0] || null : null;

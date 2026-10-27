@@ -196,16 +196,16 @@ test('the planning of the API (DATA.EVENTS) is read', async () => {
   const planning = parsePlanning(payload);
   assert.equal(planning.length, 4);
   assert.deepEqual(planning[0], {
-    childId: '4412',
+    childId: '1001',
     day: '2026-10-26',
     activity: 'Accueil De Loisirs Vacances - Élémentaire',
     activityId: '1481',
     status: RESERVATION_STATUS.REGISTERED,
     refs: {
       ID_EVENT: 1481,
-      ID_INSCRIPTION: 389940,
+      ID_INSCRIPTION: 500001,
       ID_CALENDAR: 9937,
-      ID_TARGET: '4412$0',
+      ID_TARGET: '1001$0',
       ID_GROUP: 99,
       IS_UNAVAILABLE: 0,
       PRESENCE_TYPE: 0,
@@ -215,9 +215,9 @@ test('the planning of the API (DATA.EVENTS) is read', async () => {
     },
   });
   const booked = planning.find((entry) => entry.day === '2026-10-27');
-  assert.equal(booked.childId, '9268');
+  assert.equal(booked.childId, '1002');
   assert.equal(booked.status, RESERVATION_STATUS.RESERVED);
-  assert.deepEqual([...new Set(planning.map((entry) => entry.childId))].sort(), ['4412', '9268']);
+  assert.deepEqual([...new Set(planning.map((entry) => entry.childId))].sort(), ['1001', '1002']);
 });
 
 test('the invoices of the API (DATA.data) are read', async () => {
