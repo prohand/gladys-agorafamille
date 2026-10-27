@@ -174,7 +174,9 @@ export class AgoraClient {
   }
 
   async getInvoices() {
-    return parseInvoices(await this.call(ENDPOINTS.invoices, { step: 'invoices' }));
+    return parseInvoices(
+      await this.call(ENDPOINTS.invoices, { query: ENDPOINTS.invoices.params, step: 'invoices' }),
+    );
   }
 
   async getMessages() {

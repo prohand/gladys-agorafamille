@@ -299,7 +299,7 @@ test('the password never reaches the logs', async (t) => {
   assert.ok(!lines.some((line) => /\bs1\b/.test(line)));
 });
 
-test('with only the sign-in and the planning known, the integration works', async (t) => {
+test('with only the requests captured so far, the integration works', async (t) => {
   restorePaths();
   t.after(() => {
     restorePaths = useTestPaths();
@@ -310,7 +310,8 @@ test('with only the sign-in and the planning known, the integration works', asyn
   const ack = await gladys.fake.action('test_connection', {});
   const message = ack.data.message ?? ack.data;
   assert.match(message.fr, /Enfants : Enfant 101, Enfant 102/);
-  assert.match(message.fr, /Factures : pas encore lues/);
+  assert.match(message.fr, /1 facture\(s\) à payer/);
+  assert.match(message.fr, /Messages : pas encore lus/);
 });
 
 test('without the children request, the children come from the planning', async (t) => {

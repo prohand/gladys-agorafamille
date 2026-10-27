@@ -49,8 +49,17 @@ export const ENDPOINTS = {
     query: { context: 'idContext', targets: 'targets', from: 'startDate', to: 'endDate' },
     context: '1',
   },
-  /** The invoices, paid and to pay. Not captured yet. */
-  invoices: { method: 'GET', path: null },
+  /**
+   * The invoices, paid and to pay. Captured from the portal (October 2026):
+   * GET /InternalApi/API_DASHBOARD/invoicesAgpGrid?state=all
+   * Answers `{ DATA: { count, data: [{ idInvoice, FACT_DESC, total,
+   * TOTAL_PAID, limitDatePayment, STATUS }] } }` (see src/agora/parse.js).
+   */
+  invoices: {
+    method: 'GET',
+    path: 'InternalApi/API_DASHBOARD/invoicesAgpGrid',
+    params: { state: 'all' },
+  },
   /** The messages and notifications of the municipality. Not captured yet. */
   messages: { method: 'GET', path: null },
   /** Ask to book one day of an activity. Not captured yet. */

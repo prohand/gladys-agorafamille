@@ -186,3 +186,11 @@ test('a login answer without a session names its fields, not their values', asyn
     return true;
   });
 });
+
+test('the invoices are asked the way the portal pages ask them', async () => {
+  const portal = createFakePortal();
+  await clientFor(portal).getInvoices();
+  const request = portal.requests.at(-1);
+  assert.equal(request.url, `${BASE}/InternalApi/API_DASHBOARD/invoicesAgpGrid?state=all`);
+  assert.equal(request.headers.session_id, 's1');
+});
