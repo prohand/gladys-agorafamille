@@ -90,7 +90,9 @@ export function createFakePortal(data = {}) {
       const body = JSON.parse(options.body);
       if (
         body[ENDPOINTS.login.fields.username] !== portal.username ||
-        body[ENDPOINTS.login.fields.password] !== portal.password
+        // The real API takes the password Base64-encoded (`btoa`).
+        body[ENDPOINTS.login.fields.password] !==
+          Buffer.from(portal.password, 'latin1').toString('base64')
       ) {
         // As the real API refuses (October 2026).
         return json({

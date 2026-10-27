@@ -33,8 +33,9 @@ Release.
 - **Agora Famille** dashboard widget: balance, children today and tomorrow, invoices to pay,
   unread messages, absence and lunch forms, link to the portal.
 - "Test the connection" action naming the step that fails, with the portal's own message.
-- Requests are sent with a French `Accept-Language` and a `User-Agent` naming the integration:
-  with Node's defaults, the portal answered the sign-in with "Exception detected".
+- The password is sent Base64-encoded, as the portal pages send it: sent as typed, the portal
+  answered the sign-in with "Exception detected".
+- Requests are sent with a French `Accept-Language` and a `User-Agent` naming the integration.
 - A request the portal refuses logs its address, its HTTP status and the start of the answer
   (login and password masked), to adapt the portal requests.
 - Cloud transport badge on every device, unreachable while the portal cannot be read.

@@ -32,6 +32,10 @@ export const ENDPOINTS = {
     method: 'POST',
     path: 'InternalApi/API_DASHBOARD/authentication',
     fields: { username: 'LOGIN', password: 'PASSWORD' },
+    // The portal pages never send the password as typed: they encode it in
+    // Base64 first (`btoa(password)`, seen in the portal's code, October
+    // 2026). Sent as typed, the API answered "Exception detected".
+    passwordEncoding: 'base64',
   },
   /** The children of the family. Not captured yet. */
   children: { method: 'GET', path: null },

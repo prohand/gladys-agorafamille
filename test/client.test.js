@@ -1,6 +1,6 @@
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { AgoraClient, ERROR_CODES, frenchDate } from '../src/agora/client.js';
+import { AgoraClient, ERROR_CODES, encodePassword, frenchDate } from '../src/agora/client.js';
 import { ENDPOINTS } from '../src/agora/endpoints.js';
 import { BASE, createFakePortal, useTestPaths } from './helpers/fakePortal.js';
 
@@ -37,7 +37,11 @@ test('signs in once, the way the portal pages do, then sends the session id', as
   const [login] = portal.requests;
   assert.equal(login.method, 'POST');
   assert.equal(login.path, 'InternalApi/API_DASHBOARD/authentication');
-  assert.deepEqual(JSON.parse(login.body), { LOGIN: portal.username, PASSWORD: portal.password });
+  assert.deepEqual(JSON.parse(login.body), {
+    LOGIN: portal.username,
+    // `btoa('s3cret')`, as the portal pages send it.
+    PASSWORD: 'czNjcmV0',
+  });
   assert.equal(login.headers['content-type'], 'application/json');
   assert.equal(login.headers.session_id, 'null');
   assert.equal(login.headers.ref_year, 'null');
@@ -251,4 +255,11 @@ test('an exception of the portal is not called a wrong password', async () => {
     step: 'login',
     portalMessage: 'Exception detected',
   });
+});
+
+test("the password is encoded like the browser's btoa, accents included", () => {
+  assert.equal(encodePassword('s3cret', 'base64'), 'czNjcmV0');
+  // btoa('Été2026!') in a browser.
+  assert.equal(encodePassword('Été2026!', 'base64'), 'yXTpMjAyNiE=');
+  assert.equal(encodePassword('s3cret', undefined), 's3cret');
 });

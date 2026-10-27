@@ -96,7 +96,10 @@ export class AgoraClient {
     this.signedIn = false;
     const { fields } = ENDPOINTS.login;
     const response = await this.send(ENDPOINTS.login, {
-      body: JSON.stringify({ [fields.username]: this.username, [fields.password]: this.password }),
+      body: JSON.stringify({
+        [fields.username]: this.username,
+        [fields.password]: encodePassword(this.password, ENDPOINTS.login.passwordEncoding),
+      }),
       contentType: 'application/json',
       step: 'login',
     });
@@ -568,6 +571,18 @@ function collectTargets(node, found = new Set(), depth = 0) {
     }
   }
   return [...found];
+}
+
+/**
+ * The password the way the portal pages send it. `base64` is the browser's
+ * `btoa()`, which encodes each character as one Latin-1 byte: `Buffer`'s
+ * `latin1` does exactly that, `utf8` would not for an accented password.
+ */
+export function encodePassword(password, encoding) {
+  if (encoding === 'base64') {
+    return Buffer.from(password, 'latin1').toString('base64');
+  }
+  return password;
 }
 
 /** `2026-11-05` → `05/11/2026`, the way the portal's forms write a day. */
