@@ -8,8 +8,8 @@
     "de": "Kantine, Nachmittagsbetreuung, Rechnungen und Nachrichten des Familienportals Agora Famille.",
     "es": "Comedor, actividades extraescolares, facturas y mensajes del portal Agora Famille."
   },
-  "version": "2.0.1",
-  "docker_image": "ghcr.io/prohand/gladys-agorafamille:2.0.1",
+  "version": "2.0.2",
+  "docker_image": "ghcr.io/prohand/gladys-agorafamille:2.0.2",
   "gladys_version": ">=5.3.0",
   "cover_image": "https://raw.githubusercontent.com/prohand/gladys-agorafamille/main/cover.png",
   "categories": ["services", "notifications"],
