@@ -15,7 +15,10 @@ Release.
 ### Added
 
 - Direct debit (prélèvement automatique): the new "I pay by direct debit" setting shows the
-  invoices as "Direct debit" instead of "To pay" (widget, next invoice, connection test). They
+  invoices as paid by direct debit instead of "To pay" (widget, next invoice, connection test).
+  The portal only gives the latest day to pay: the day of the debit comes from the new "Day of
+  the direct debit" setting, in the month of that latest day ("Prélevé le 10/11"), and is
+  given to the "new invoice" trigger as `debit_date`. They
   stay counted in the balance, no longer fire "invoice due soon", and "new invoice" carries a
   new `direct_debit` variable. An invoice state naming the direct debit is recognised too, and
   "Prélevée" now reads as paid.

@@ -39,6 +39,7 @@ In Gladys: **Integrationen → Agora Famille → Konfiguration**.
 | **Rechnungserinnerung (Tage)**                 | Der Auslöser „Rechnung bald fällig“ wird so viele Tage vor dem Fälligkeitsdatum ausgelöst (standardmäßig 3, 0 schaltet ihn ab).                                                         |
 | **An den Trésor public übergebene Rechnungen** | Nummern der Rechnungen, die die Gemeinde an den Trésor public übergeben hat, durch Kommas getrennt (z. B. `164513`). Siehe unten.                                                       |
 | **Ich zahle per Lastschrift**                  | Ankreuzen, wenn die Bank deine Rechnungen von selbst bezahlt (SEPA). Siehe unten.                                                                                                       |
+| **Tag der Lastschrift**                        | Tag des Monats, an dem die Bank abbucht (z. B. `10`). Siehe unten. 0 = unbekannt.                                                                                                       |
 | **Ausführliche Protokolle**                    | Protokolliert jede Anfrage an das Portal, zur Fehlersuche. Nie das Passwort.                                                                                                            |
 
 Klicke dann auf **Verbindung testen**: Die Antwort nennt deine Kinder, die
@@ -81,12 +82,12 @@ solange das Portal nicht gelesen werden kann.
 
 ### Auslöser
 
-| Auslöser                                | Wann                                                                                                                         | Variablen                                                             |
-| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| **Eine neue Rechnung wird ausgestellt** | Eine unbezahlte Rechnung erscheint.                                                                                          | `label`, `amount`, `due_date`, `invoice_id`, `direct_debit`           |
-| **Eine Rechnung wird bald fällig**      | Eine unbezahlte Rechnung wird innerhalb der eingestellten Tage fällig. Nur einmal. Nicht bei Lastschrift.                    | `label`, `amount`, `due_date`, `days_left`, `invoice_id`              |
-| **Eine Nachricht wird empfangen**       | Die Gemeinde hat eine Nachricht gesendet.                                                                                    | `subject`, `sender`, `date`                                           |
-| **Eine Buchung ändert sich**            | Ein gebuchter oder angefragter Tag ändert seinen Status (angenommen, abgelehnt, storniert…). Nach Kind und Status filterbar. | `child_name`, `activity`, `date`, `status`, `previous_status`, `meal` |
+| Auslöser                                | Wann                                                                                                                         | Variablen                                                                 |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| **Eine neue Rechnung wird ausgestellt** | Eine unbezahlte Rechnung erscheint.                                                                                          | `label`, `amount`, `due_date`, `invoice_id`, `direct_debit`, `debit_date` |
+| **Eine Rechnung wird bald fällig**      | Eine unbezahlte Rechnung wird innerhalb der eingestellten Tage fällig. Nur einmal. Nicht bei Lastschrift.                    | `label`, `amount`, `due_date`, `days_left`, `invoice_id`                  |
+| **Eine Nachricht wird empfangen**       | Die Gemeinde hat eine Nachricht gesendet.                                                                                    | `subject`, `sender`, `date`                                               |
+| **Eine Buchung ändert sich**            | Ein gebuchter oder angefragter Tag ändert seinen Status (angenommen, abgelehnt, storniert…). Nach Kind und Status filterbar. | `child_name`, `activity`, `date`, `status`, `previous_status`, `meal`     |
 
 Die Variablen lassen sich in den folgenden Aktionen verwenden, z. B.
 `{{triggerEvent.data.amount}}`.
@@ -154,13 +155,27 @@ SEPA), ist im Portal nichts zu bezahlen. Kreuze **Ich zahle per Lastschrift**
 an:
 
 - das Widget zeigt **Abzubuchen** statt **Zu zahlen**, und jede Rechnung mit
-  dem Abzeichen **Lastschrift** (blau);
-- die **nächste Rechnung** lautet „45,20 € prélevés le 20/11/2026 — …“ statt
-  „avant le“;
+  einem blauen Abzeichen;
+- die **nächste Rechnung** lautet nicht mehr „avant le …“ (zahlen bis);
 - „Rechnung bald fällig“ wird für sie nicht mehr ausgelöst;
 - „neue Rechnung“ wird weiter ausgelöst, mit `direct_debit` auf wahr;
 - sie zählen weiter zum **offenen Betrag**: Das Geld ist geschuldet, bis die
   Bank zahlt.
+
+### Der Tag der Abbuchung
+
+Das Portal nennt den Tag der Abbuchung nicht: Sein einziges Datum ist der
+**letzte Zahltag**. Trage den Tag des Monats, an dem deine Bank abbucht, unter
+**Tag der Lastschrift** ein (z. B. `10`). Er gilt im Monat des letzten
+Zahltags: Eine bis zum 24.11. zu zahlende Rechnung wird am 10.11. abgebucht.
+
+| Tag der Lastschrift | Widget                                                   | Nächste Rechnung                                     |
+| ------------------- | -------------------------------------------------------- | ---------------------------------------------------- |
+| `10`                | Abzeichen **Abbuchung 10.11.**, der Betrag               | „45,20 € prélevés le 10/11/2026 — …“                 |
+| `0` (unbekannt)     | Abzeichen **Lastschrift**, „45,20 € · fällig 24.11.2026“ | „45,20 € en prélèvement, échéance le 24/11/2026 — …“ |
+
+Der Auslöser „neue Rechnung“ liefert diesen Tag in `debit_date` (leer, wenn
+unbekannt).
 
 Das Portal sagt es in seiner Rechnungsliste nicht. Schreibt es das eines Tages
 in den Status einer Rechnung („prélèvement“…), wird sie ohne das Kästchen

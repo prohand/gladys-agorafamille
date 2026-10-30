@@ -57,6 +57,7 @@ test('a new unpaid invoice and a new message are events', () => {
         amount: 40,
         due_date: '2026-11-30',
         direct_debit: false,
+        debit_date: null,
       },
     },
     {

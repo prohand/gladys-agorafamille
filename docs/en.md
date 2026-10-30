@@ -39,6 +39,7 @@ In Gladys: **Integrations → Agora Famille → Configuration**.
 | **Invoice reminder (days)**            | The "invoice due soon" trigger fires this many days before the due date (3 by default, 0 turns it off).                                                                          |
 | **Invoices sent to the Trésor public** | Numbers of the invoices the municipality sent to the Trésor public, separated by commas (e.g. `164513`). See below.                                                              |
 | **I pay by direct debit**              | Tick it if the bank pays your invoices on its own (SEPA). See below.                                                                                                             |
+| **Day of the direct debit**            | Day of the month the bank takes the invoices (e.g. `10`). See below. 0 = unknown.                                                                                                |
 | **Detailed logs**                      | Logs every request to the portal, for troubleshooting. Never the password.                                                                                                       |
 
 Then click **Test the connection**: the answer lists your children, the
@@ -81,12 +82,12 @@ cannot be read.
 
 ### Triggers
 
-| Trigger                     | When                                                                                                            | Variables                                                             |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| **A new invoice is issued** | An unpaid invoice appears.                                                                                      | `label`, `amount`, `due_date`, `invoice_id`, `direct_debit`           |
-| **An invoice is due soon**  | An unpaid invoice reaches its due date within the configured days. Once. Not for direct debit.                  | `label`, `amount`, `due_date`, `days_left`, `invoice_id`              |
-| **A message is received**   | The municipality sent a message.                                                                                | `subject`, `sender`, `date`                                           |
-| **A booking changes**       | A booked or requested day changed state (accepted, refused, cancelled…). Can be filtered by child and by state. | `child_name`, `activity`, `date`, `status`, `previous_status`, `meal` |
+| Trigger                     | When                                                                                                            | Variables                                                                 |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| **A new invoice is issued** | An unpaid invoice appears.                                                                                      | `label`, `amount`, `due_date`, `invoice_id`, `direct_debit`, `debit_date` |
+| **An invoice is due soon**  | An unpaid invoice reaches its due date within the configured days. Once. Not for direct debit.                  | `label`, `amount`, `due_date`, `days_left`, `invoice_id`                  |
+| **A message is received**   | The municipality sent a message.                                                                                | `subject`, `sender`, `date`                                               |
+| **A booking changes**       | A booked or requested day changed state (accepted, refused, cancelled…). Can be filtered by child and by state. | `child_name`, `activity`, `date`, `status`, `previous_status`, `meal`     |
 
 Use the variables in the following actions, e.g.
 `{{triggerEvent.data.amount}}`.
@@ -152,13 +153,26 @@ When the bank pays your invoices on its own (prélèvement automatique, SEPA),
 there is nothing to pay on the portal. Tick **I pay by direct debit**:
 
 - the widget shows **To be debited** instead of **To pay**, and each invoice
-  with the **Direct debit** badge (blue);
-- the **next invoice** reads "45,20 € prélevés le 20/11/2026 — …" instead of
-  "avant le";
+  with a blue badge;
+- the **next invoice** no longer reads "avant le …" (pay before);
 - "invoice due soon" no longer fires for them;
 - "new invoice" still fires, with `direct_debit` true;
 - they stay counted in the **balance due**: the money is still owed until the
   bank pays it.
+
+### The day of the debit
+
+The portal does not give the day of the debit: its only date is the **latest
+day to pay**. Type the day of the month your bank takes the invoices in **Day
+of the direct debit** (e.g. `10`). It is taken in the month of the latest day
+to pay: an invoice to pay before 24/11 is taken on 10/11.
+
+| Day of the debit | Widget                                             | Next invoice                                         |
+| ---------------- | -------------------------------------------------- | ---------------------------------------------------- |
+| `10`             | **Debit on 10/11** badge, the amount               | "45,20 € prélevés le 10/11/2026 — …"                 |
+| `0` (unknown)    | **Direct debit** badge, "45,20 € · due 24/11/2026" | "45,20 € en prélèvement, échéance le 24/11/2026 — …" |
+
+The "new invoice" trigger gives that day in `debit_date` (empty when unknown).
 
 The portal does not say it in its invoice list. If one day it writes it in an
 invoice state ("prélèvement"…), the invoice is recognised without the box.

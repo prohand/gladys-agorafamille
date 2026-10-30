@@ -15,7 +15,7 @@
 // capitals (`DATA.EVENTS`, `START_DATE_TIME`), older pages in camelCase.
 // -----------------------------------------------------------------------------
 
-import { parseDay } from './dates.js';
+import { parseDay, sameMonthOn } from './dates.js';
 
 /** The reservation states of a day of activity, as the integration names them. */
 export const RESERVATION_STATUS = {
@@ -417,16 +417,25 @@ export function markTreasury(invoices, numbers = []) {
  * invoice sent to the Trésor public is not one of them: the bank no longer
  * pays it.
  *
+ * `debitOn` is the day the bank takes it. The portal does not give it (its
+ * date is the latest day to pay), so it comes from the day of the month the
+ * family typed, in the month of that latest day; `null` without one.
+ *
  * @param {Array<object>} invoices see parseInvoices
  * @param {boolean} directDebit the family pays by direct debit
+ * @param {number} [debitDay] day of the month of the debit, 0 = unknown
  */
-export function markDirectDebit(invoices, directDebit = false) {
-  if (!directDebit) {
+export function markDirectDebit(invoices, directDebit = false, debitDay = 0) {
+  if (!directDebit && !debitDay) {
     return invoices;
   }
-  return invoices.map((invoice) =>
-    invoice.treasury ? invoice : { ...invoice, directDebit: true },
-  );
+  return invoices.map((invoice) => {
+    if (!invoice.directDebit && !(directDebit && !invoice.treasury)) {
+      return invoice;
+    }
+    const debitOn = debitDay && invoice.dueOn ? sameMonthOn(invoice.dueOn, debitDay) : null;
+    return { ...invoice, directDebit: true, debitOn };
+  });
 }
 
 function parsePaid(entry) {

@@ -344,3 +344,35 @@ test('a family paying by direct debit marks every invoice but those at the Trés
   );
   assert.equal(markDirectDebit(invoices, false), invoices);
 });
+
+test('the day of the debit is taken in the month of the due date', () => {
+  const invoices = parseInvoices([
+    { idInvoice: 1, total: 40, TOTAL_PAID: 0, limitDatePayment: '24/11/2026' },
+    { idInvoice: 2, total: 40, TOTAL_PAID: 0, limitDatePayment: '15/02/2027' },
+    { idInvoice: 3, total: 40, TOTAL_PAID: 0 },
+  ]);
+  assert.deepEqual(
+    markDirectDebit(invoices, true, 31).map((invoice) => [invoice.id, invoice.debitOn]),
+    [
+      ['1', '2026-11-30'],
+      // No 31st in February: its last day, never March.
+      ['2', '2027-02-28'],
+      ['3', null],
+    ],
+  );
+  assert.deepEqual(
+    markDirectDebit(invoices, true, 0).map((invoice) => invoice.debitOn),
+    [null, null, null],
+  );
+  // The day applies to an invoice the portal marks itself, too.
+  const marked = parseInvoices([
+    {
+      idInvoice: 4,
+      total: 40,
+      TOTAL_PAID: 0,
+      STATUS: 'Prélèvement',
+      limitDatePayment: '24/11/2026',
+    },
+  ]);
+  assert.equal(markDirectDebit(marked, false, 5)[0].debitOn, '2026-11-05');
+});

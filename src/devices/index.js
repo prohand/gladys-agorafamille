@@ -204,13 +204,17 @@ function describeNextInvoice(snapshot) {
     return 'Aucune facture à payer';
   }
   const amount = formatAmount(next.remaining, 'fr');
-  const day = next.dueOn?.split('-').reverse().join('/');
-  // The bank pays it on its own: say so rather than "pay before".
-  const due = next.directDebit
-    ? ` prélevés${day ? ` le ${day}` : ''}`
-    : day
-      ? ` avant le ${day}`
-      : '';
+  const day = (value) => value.split('-').reverse().join('/');
+  // The bank pays it on its own: say so rather than "pay before". The day of
+  // the debit is known only from the configuration; the portal's own date is
+  // the latest day to pay.
+  const due = !next.directDebit
+    ? next.dueOn
+      ? ` avant le ${day(next.dueOn)}`
+      : ''
+    : next.debitOn
+      ? ` prélevés le ${day(next.debitOn)}`
+      : ` en prélèvement${next.dueOn ? `, échéance le ${day(next.dueOn)}` : ''}`;
   return truncate(`${amount} €${due} — ${next.label}`);
 }
 

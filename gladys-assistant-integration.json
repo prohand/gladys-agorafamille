@@ -208,6 +208,26 @@
       "default": false
     },
     {
+      "key": "direct_debit_day",
+      "type": "number",
+      "label": {
+        "en": "Day of the direct debit",
+        "fr": "Jour du prélèvement",
+        "de": "Tag der Lastschrift",
+        "es": "Día del cargo"
+      },
+      "description": {
+        "en": "Day of the month the bank takes the invoice, in the month of its due date (e.g. 10: an invoice due on 24/11 is taken on 10/11). The portal does not give it: its date is the latest day to pay. 0 = unknown.",
+        "fr": "Jour du mois où la banque prélève la facture, dans le mois de son échéance (ex. 10 : une facture à échéance du 24/11 est prélevée le 10/11). Le portail ne le donne pas : sa date est la date limite de paiement. 0 = inconnu.",
+        "de": "Tag des Monats, an dem die Bank die Rechnung abbucht, im Monat ihrer Fälligkeit (z. B. 10: eine am 24.11. fällige Rechnung wird am 10.11. abgebucht). Das Portal nennt ihn nicht: Sein Datum ist der letzte Zahltag. 0 = unbekannt.",
+        "es": "Día del mes en que el banco carga la factura, en el mes de su vencimiento (p. ej. 10: una factura que vence el 24/11 se carga el 10/11). El portal no lo da: su fecha es el último día de pago. 0 = desconocido."
+      },
+      "required": false,
+      "default": 0,
+      "min": 0,
+      "max": 31
+    },
+    {
       "key": "debug_logs",
       "type": "boolean",
       "label": {
@@ -302,6 +322,16 @@
             "fr": "Payée par prélèvement",
             "de": "Per Lastschrift bezahlt",
             "es": "Pagada por domiciliación"
+          }
+        },
+        {
+          "key": "debit_date",
+          "type": "string",
+          "label": {
+            "en": "Day of the debit",
+            "fr": "Date du prélèvement",
+            "de": "Abbuchungsdatum",
+            "es": "Fecha del cargo"
           }
         }
       ]
