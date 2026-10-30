@@ -71,6 +71,7 @@ export function createAgoraService({ config, store, fetch, now = () => new Date(
         config.treasuryInvoices,
       ),
       config.direct_debit,
+      config.direct_debit_day,
     );
     const messages = await optional(() => client.getMessages(), 'messages', modules);
     return buildSnapshot({

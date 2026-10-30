@@ -199,12 +199,12 @@ function buildCards(snapshot, language) {
   for (const invoice of unpaidInvoices(snapshot)) {
     const left = invoice.dueOn ? daysBetween(snapshot.today, invoice.dueOn) : null;
     if (invoice.directDebit) {
-      // The day goes in the badge: a bare date under the title does not say
-      // it is the day of the debit. Without it, the row shows the amount.
+      // The day of the debit goes in the badge: a bare date under the title
+      // does not say what it is. Without it, the row shows the subtitle.
       cards.push({
         title: cut(invoice.label, LIMITS.cardTitle),
-        subtitle: formatEuros(invoice.remaining, language),
-        badge: { text: directDebitBadge(invoice.dueOn, language), color: WIDGET_COLORS.INFO },
+        subtitle: directDebitSubtitle(invoice, language),
+        badge: { text: directDebitBadge(invoice.debitOn, language), color: WIDGET_COLORS.INFO },
         description: directDebitNote(invoice, language),
       });
       continue;
@@ -274,23 +274,48 @@ function directDebitBadge(day, language) {
   });
 }
 
+/**
+ * The amount, and the portal's due date when the day of the debit is not
+ * known: it is the latest day to pay, not the day the bank takes it.
+ */
+function directDebitSubtitle(invoice, language) {
+  const amount = formatEuros(invoice.remaining, language);
+  if (invoice.debitOn || !invoice.dueOn) {
+    return amount;
+  }
+  const day = longDay(invoice.dueOn, language);
+  return pick(language, {
+    en: `${amount} · due ${day}`,
+    fr: `${amount} · échéance ${day}`,
+    de: `${amount} · fällig ${day}`,
+    es: `${amount} · vence ${day}`,
+  });
+}
+
 function directDebitNote(invoice, language) {
   const amount = formatEuros(invoice.remaining, language);
-  if (!invoice.dueOn) {
+  if (invoice.debitOn) {
+    const day = longDay(invoice.debitOn, language);
     return pick(language, {
-      en: `${amount} paid by direct debit: nothing to do.`,
-      fr: `${amount} payés par prélèvement automatique : rien à faire.`,
-      de: `${amount} per Lastschrift bezahlt: nichts zu tun.`,
-      es: `${amount} pagados por domiciliación bancaria: nada que hacer.`,
+      en: `${amount} taken by direct debit on ${day}: nothing to do.`,
+      fr: `${amount} prélevés le ${day} : rien à faire.`,
+      de: `${amount} werden am ${day} abgebucht: nichts zu tun.`,
+      es: `${amount} cargados el ${day}: nada que hacer.`,
     });
   }
-  const day = invoice.dueOn.split('-').reverse().join('/');
-  return pick(language, {
-    en: `${amount} taken by direct debit on ${day} (the due date of the portal): nothing to do.`,
-    fr: `${amount} prélevés le ${day} (date d'échéance du portail) : rien à faire.`,
-    de: `${amount} werden am ${day.replaceAll('/', '.')} abgebucht (Fälligkeit laut Portal): nichts zu tun.`,
-    es: `${amount} cargados el ${day} (vencimiento del portal): nada que hacer.`,
+  const hint = pick(language, {
+    en: 'Paid by direct debit: nothing to do. Set the day of the debit in the configuration to see it here.',
+    fr: 'Payée par prélèvement automatique : rien à faire. Indiquez le jour du prélèvement dans la configuration pour le voir ici.',
+    de: 'Per Lastschrift bezahlt: nichts zu tun. Trage den Abbuchungstag in der Konfiguration ein, um ihn hier zu sehen.',
+    es: 'Pagada por domiciliación bancaria: nada que hacer. Indique el día del cargo en la configuración para verlo aquí.',
   });
+  return `${directDebitSubtitle(invoice, language)}. ${hint}`;
+}
+
+/** "24/11/2026", "24.11.2026" in German. */
+function longDay(day, language) {
+  const text = day.split('-').reverse().join('/');
+  return language === 'de' ? text.replaceAll('/', '.') : text;
 }
 
 const TREASURY_BADGE = { en: 'Treasury', fr: 'Trésor public', de: 'Staatskasse', es: 'Tesoro' };

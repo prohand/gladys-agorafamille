@@ -24,6 +24,7 @@ export const DEFAULT_CONFIG = {
   due_reminder_days: 3, // "invoice due soon" this many days before; 0 = off
   treasury_invoices: '', // invoice numbers sent to the Trésor public, e.g. "164513"
   direct_debit: false, // the family pays by direct debit (prélèvement automatique)
+  direct_debit_day: 0, // day of the month of the debit; 0 = unknown (the portal's due date)
   debug_logs: false, // raise the log level to debug, from the Configuration screen
 };
 
@@ -67,6 +68,7 @@ export function normalizeConfig(raw = {}) {
     debug_logs: toBoolean(raw.debug_logs, DEFAULT_CONFIG.debug_logs),
     treasury_invoices: String(raw.treasury_invoices ?? ''),
     direct_debit: toBoolean(raw.direct_debit, DEFAULT_CONFIG.direct_debit),
+    direct_debit_day: clampInteger(raw.direct_debit_day, DEFAULT_CONFIG.direct_debit_day, 0, 31),
   };
   config.treasuryInvoices = parseInvoiceNumbers(config.treasury_invoices);
   const portal = parsePortalUrl(raw.portal_url);

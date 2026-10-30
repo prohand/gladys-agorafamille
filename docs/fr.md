@@ -40,6 +40,7 @@ Dans Gladys : **Intégrations → Agora Famille → Configuration**.
 | **Rappel de facture (jours)**            | Le déclencheur « facture bientôt à échéance » part ce nombre de jours avant l'échéance (3 par défaut, 0 pour le couper).                                                                    |
 | **Factures transmises au Trésor public** | Numéros des factures que la commune a transmises au Trésor public, séparés par des virgules (ex. `164513`). Voir plus bas.                                                                  |
 | **Je suis en prélèvement automatique**   | À cocher si la banque paie vos factures toute seule (SEPA). Voir plus bas.                                                                                                                  |
+| **Jour du prélèvement**                  | Jour du mois où la banque prélève (ex. `10`). Voir plus bas. 0 = inconnu.                                                                                                                   |
 | **Logs détaillés**                       | Journalise chaque requête au portail, pour le dépannage. Jamais le mot de passe.                                                                                                            |
 
 Cliquez ensuite sur **Tester la connexion** : la réponse liste vos enfants, le
@@ -82,12 +83,12 @@ ne peut pas être lu.
 
 ### Déclencheurs
 
-| Déclencheur                        | Quand                                                                                                  | Variables                                                             |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------- |
-| **Une nouvelle facture est émise** | Une facture impayée apparaît.                                                                          | `label`, `amount`, `due_date`, `invoice_id`, `direct_debit`           |
-| **Une facture arrive à échéance**  | Une facture impayée arrive à échéance dans le délai réglé. Une seule fois. Pas en prélèvement.         | `label`, `amount`, `due_date`, `days_left`, `invoice_id`              |
-| **Un message est reçu**            | La commune a envoyé un message.                                                                        | `subject`, `sender`, `date`                                           |
-| **Une réservation change**         | Un jour réservé ou demandé change d'état (accepté, refusé, annulé…). Filtrable par enfant et par état. | `child_name`, `activity`, `date`, `status`, `previous_status`, `meal` |
+| Déclencheur                        | Quand                                                                                                  | Variables                                                                 |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------- |
+| **Une nouvelle facture est émise** | Une facture impayée apparaît.                                                                          | `label`, `amount`, `due_date`, `invoice_id`, `direct_debit`, `debit_date` |
+| **Une facture arrive à échéance**  | Une facture impayée arrive à échéance dans le délai réglé. Une seule fois. Pas en prélèvement.         | `label`, `amount`, `due_date`, `days_left`, `invoice_id`                  |
+| **Un message est reçu**            | La commune a envoyé un message.                                                                        | `subject`, `sender`, `date`                                               |
+| **Une réservation change**         | Un jour réservé ou demandé change d'état (accepté, refusé, annulé…). Filtrable par enfant et par état. | `child_name`, `activity`, `date`, `status`, `previous_status`, `meal`     |
 
 Les variables s'utilisent dans les actions suivantes, par ex.
 `{{triggerEvent.data.amount}}`.
@@ -157,14 +158,27 @@ il n'y a rien à payer sur le portail. Cochez **Je suis en prélèvement
 automatique** :
 
 - le widget affiche **À prélever** au lieu de **À payer**, et chaque facture
-  avec la date du prélèvement dans son badge bleu (**Prélevé le 24/11**) et
-  son montant ;
-- la **prochaine facture** affiche « 45,20 € prélevés le 20/11/2026 — … » au
-  lieu de « avant le » ;
+  avec un badge bleu ;
+- la **prochaine facture** n'affiche plus « avant le … » ;
 - « facture bientôt à échéance » ne part plus pour elles ;
 - « nouvelle facture » part toujours, avec `direct_debit` à vrai ;
 - elles restent comptées dans le **reste à payer** : l'argent est dû tant que
   la banque n'a pas payé.
+
+### Le jour du prélèvement
+
+Le portail ne donne pas la date du prélèvement : sa seule date est la **date
+limite de paiement**. Indiquez le jour du mois où votre banque prélève dans
+**Jour du prélèvement** (ex. `10`). Il est pris dans le mois de la date
+limite : une facture à payer avant le 24/11 est prélevée le 10/11.
+
+| Jour du prélèvement | Widget                                                   | Prochaine facture                                      |
+| ------------------- | -------------------------------------------------------- | ------------------------------------------------------ |
+| `10`                | badge **Prélevé le 10/11**, le montant                   | « 45,20 € prélevés le 10/11/2026 — … »                 |
+| `0` (inconnu)       | badge **Prélèvement**, « 45,20 € · échéance 24/11/2026 » | « 45,20 € en prélèvement, échéance le 24/11/2026 — … » |
+
+Le déclencheur « nouvelle facture » donne ce jour dans `debit_date` (vide s'il
+est inconnu).
 
 Le portail ne le dit pas dans sa liste de factures. S'il l'écrit un jour dans
 l'état d'une facture (« prélèvement »…), elle est reconnue sans la case. Une

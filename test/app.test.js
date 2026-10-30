@@ -348,7 +348,7 @@ test('a family paying by direct debit sees "Direct debit", not "To pay"', async 
   assert.equal(gladys.fake.lastState(account.feature(ACCOUNT_FEATURES.BALANCE)), 45.2);
   assert.equal(
     gladys.fake.lastState(account.feature(ACCOUNT_FEATURES.NEXT_INVOICE)),
-    '45,20 € prélevés le 20/11/2026 — Octobre 2026',
+    '45,20 € en prélèvement, échéance le 20/11/2026 — Octobre 2026',
   );
 
   const ack = await gladys.fake.widgetGet(FAMILY_WIDGET, { settings: {}, language: 'fr' });
@@ -357,16 +357,39 @@ test('a family paying by direct debit sees "Direct debit", not "To pay"', async 
   const focal = content.components.find((component) => component.type === 'value');
   assert.deepEqual([focal.label, focal.value], ['À prélever', '45,20']);
   const cards = content.components.find((component) => component.type === 'card-list').items;
-  // The day of the debit is in the badge, the one text a row always shows.
+  // The day of the debit is not known: the portal's date is said to be the
+  // due date, never the day of the debit.
   assert.deepEqual(
     [cards[0].title, cards[0].date, cards[0].badge.text, cards[0].badge.color],
-    ['Octobre 2026', undefined, 'Prélevé le 20/11', 'info'],
+    ['Octobre 2026', undefined, 'Prélèvement', 'info'],
   );
-  assert.match(cards[0].subtitle, /^45,20\s€$/);
-  assert.match(cards[0].description, /prélevés le 20\/11\/2026/);
+  assert.match(cards[0].subtitle, /^45,20\s€ · échéance 20\/11\/2026$/);
+  assert.match(cards[0].description, /jour du prélèvement dans la configuration/);
 
   const answer = await gladys.fake.action('test_connection', {});
   const message = answer.data.message ?? answer.data;
   assert.match(message.fr, /0 facture\(s\) à payer/);
   assert.match(message.fr, /1 facture\(s\) en prélèvement automatique, rien à faire/);
+});
+
+test('the day of the debit typed in the configuration is the one shown', async (t) => {
+  const { gladys, app } = await start(family(), createMemoryStore(), {
+    direct_debit: true,
+    direct_debit_day: 10,
+  });
+  t.after(() => app.stop());
+
+  const account = accountIds(gladys, config);
+  // Due on 20/11: taken on the 10th of that month.
+  assert.equal(
+    gladys.fake.lastState(account.feature(ACCOUNT_FEATURES.NEXT_INVOICE)),
+    '45,20 € prélevés le 10/11/2026 — Octobre 2026',
+  );
+  const ack = await gladys.fake.widgetGet(FAMILY_WIDGET, { settings: {}, language: 'fr' });
+  const content = ack.data.content ?? ack.data;
+  assert.deepEqual(validateWidgetContent(content), []);
+  const [card] = content.components.find((component) => component.type === 'card-list').items;
+  assert.equal(card.badge.text, 'Prélevé le 10/11');
+  assert.match(card.subtitle, /^45,20\s€$/);
+  assert.match(card.description, /prélevés le 10\/11\/2026/);
 });

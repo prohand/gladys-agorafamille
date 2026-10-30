@@ -173,6 +173,7 @@ export function diffSnapshots(previous, current, { dueReminderDays, reminded = [
             amount: invoice.amount,
             due_date: invoice.dueOn,
             direct_debit: invoice.directDebit === true,
+            debit_date: invoice.debitOn ?? null,
           },
         });
       }

@@ -42,6 +42,21 @@ export function addDays(day, offset) {
 }
 
 /**
+ * The given day of the month of a day; a 31 in a 30-day month is its last
+ * day (a bank debits on the last working day, never in the next month).
+ *
+ * @param {string} day `YYYY-MM-DD`
+ * @param {number} dayOfMonth 1–31
+ * @returns {string} `YYYY-MM-DD`
+ */
+export function sameMonthOn(day, dayOfMonth) {
+  const [year, month] = day.split('-').map(Number);
+  const last = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const date = String(Math.min(dayOfMonth, last)).padStart(2, '0');
+  return `${day.slice(0, 7)}-${date}`;
+}
+
+/**
  * Whole days from one day to another (negative when `to` is before `from`).
  *
  * @param {string} from `YYYY-MM-DD`

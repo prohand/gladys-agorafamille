@@ -40,6 +40,7 @@ En Gladys: **Integraciones → Agora Famille → Configuración**.
 | **Aviso de factura (días)**                | El disparador «factura a punto de vencer» se activa estos días antes del vencimiento (3 por defecto, 0 lo desactiva).                                                                      |
 | **Facturas transmitidas al Trésor public** | Números de las facturas que el municipio transmitió al Trésor public, separados por comas (p. ej. `164513`). Vea más abajo.                                                                |
 | **Pago por domiciliación bancaria**        | Márquelo si el banco paga sus facturas solo (SEPA). Vea más abajo.                                                                                                                         |
+| **Día del cargo**                          | Día del mes en que el banco carga las facturas (p. ej. `10`). Vea más abajo. 0 = desconocido.                                                                                              |
 | **Registros detallados**                   | Registra cada petición al portal, para diagnosticar. Nunca la contraseña.                                                                                                                  |
 
 Pulse después **Probar la conexión**: la respuesta indica sus hijos, el
@@ -82,12 +83,12 @@ se puede leer el portal.
 
 ### Disparadores
 
-| Disparador                     | Cuándo                                                                                                             | Variables                                                             |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------- |
-| **Se emite una nueva factura** | Aparece una factura impagada.                                                                                      | `label`, `amount`, `due_date`, `invoice_id`, `direct_debit`           |
-| **Una factura vence pronto**   | Una factura impagada vence dentro de los días fijados. Una sola vez. No si está domiciliada.                       | `label`, `amount`, `due_date`, `days_left`, `invoice_id`              |
-| **Se recibe un mensaje**       | El municipio envió un mensaje.                                                                                     | `subject`, `sender`, `date`                                           |
-| **Una reserva cambia**         | Un día reservado o solicitado cambia de estado (aceptado, rechazado, cancelado…). Filtrable por niño y por estado. | `child_name`, `activity`, `date`, `status`, `previous_status`, `meal` |
+| Disparador                     | Cuándo                                                                                                             | Variables                                                                 |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------- |
+| **Se emite una nueva factura** | Aparece una factura impagada.                                                                                      | `label`, `amount`, `due_date`, `invoice_id`, `direct_debit`, `debit_date` |
+| **Una factura vence pronto**   | Una factura impagada vence dentro de los días fijados. Una sola vez. No si está domiciliada.                       | `label`, `amount`, `due_date`, `days_left`, `invoice_id`                  |
+| **Se recibe un mensaje**       | El municipio envió un mensaje.                                                                                     | `subject`, `sender`, `date`                                               |
+| **Una reserva cambia**         | Un día reservado o solicitado cambia de estado (aceptado, rechazado, cancelado…). Filtrable por niño y por estado. | `child_name`, `activity`, `date`, `status`, `previous_status`, `meal`     |
 
 Las variables se usan en las acciones siguientes, p. ej.
 `{{triggerEvent.data.amount}}`.
@@ -154,13 +155,27 @@ Cuando el banco paga sus facturas solo (prélèvement automatique, SEPA), no hay
 nada que pagar en el portal. Marque **Pago por domiciliación bancaria**:
 
 - el widget muestra **A domiciliar** en lugar de **A pagar**, y cada factura
-  con el día del cargo en su insignia azul (**Cargo el 24/11**) y su importe;
-- la **próxima factura** indica «45,20 € prélevés le 20/11/2026 — …» en lugar
-  de «avant le»;
+  con una insignia azul;
+- la **próxima factura** ya no indica «avant le …» (pagar antes del);
 - «factura vence pronto» ya no se dispara para ellas;
 - «nueva factura» se sigue disparando, con `direct_debit` a verdadero;
 - siguen contando en el **saldo pendiente**: el dinero se debe hasta que el
   banco paga.
+
+### El día del cargo
+
+El portal no da el día del cargo: su única fecha es el **último día de pago**.
+Indique el día del mes en que su banco carga las facturas en **Día del cargo**
+(p. ej. `10`). Se toma en el mes del último día de pago: una factura a pagar
+antes del 24/11 se carga el 10/11.
+
+| Día del cargo     | Widget                                                   | Próxima factura                                      |
+| ----------------- | -------------------------------------------------------- | ---------------------------------------------------- |
+| `10`              | insignia **Cargo el 10/11**, el importe                  | «45,20 € prélevés le 10/11/2026 — …»                 |
+| `0` (desconocido) | insignia **Domiciliación**, «45,20 € · vence 24/11/2026» | «45,20 € en prélèvement, échéance le 24/11/2026 — …» |
+
+El disparador «nueva factura» da ese día en `debit_date` (vacío si se
+desconoce).
 
 El portal no lo indica en su lista de facturas. Si algún día lo escribe en el
 estado de una factura («prélèvement»…), se reconoce sin la casilla. Una
