@@ -38,6 +38,7 @@ In Gladys: **Integrations → Agora Famille → Configuration**.
 | **Days of planning watched**           | How many days ahead are read and watched (14 by default).                                                                                                                        |
 | **Invoice reminder (days)**            | The "invoice due soon" trigger fires this many days before the due date (3 by default, 0 turns it off).                                                                          |
 | **Invoices sent to the Trésor public** | Numbers of the invoices the municipality sent to the Trésor public, separated by commas (e.g. `164513`). See below.                                                              |
+| **I pay by direct debit**              | Tick it if the bank pays your invoices on its own (SEPA). See below.                                                                                                             |
 | **Detailed logs**                      | Logs every request to the portal, for troubleshooting. Never the password.                                                                                                       |
 
 Then click **Test the connection**: the answer lists your children, the
@@ -82,8 +83,8 @@ cannot be read.
 
 | Trigger                     | When                                                                                                            | Variables                                                             |
 | --------------------------- | --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| **A new invoice is issued** | An unpaid invoice appears.                                                                                      | `label`, `amount`, `due_date`, `invoice_id`                           |
-| **An invoice is due soon**  | An unpaid invoice reaches its due date within the configured days. Once.                                        | `label`, `amount`, `due_date`, `days_left`, `invoice_id`              |
+| **A new invoice is issued** | An unpaid invoice appears.                                                                                      | `label`, `amount`, `due_date`, `invoice_id`, `direct_debit`           |
+| **An invoice is due soon**  | An unpaid invoice reaches its due date within the configured days. Once. Not for direct debit.                  | `label`, `amount`, `due_date`, `days_left`, `invoice_id`              |
 | **A message is received**   | The municipality sent a message.                                                                                | `subject`, `sender`, `date`                                           |
 | **A booking changes**       | A booked or requested day changed state (accepted, refused, cancelled…). Can be filtered by child and by state. | `child_name`, `activity`, `date`, `status`, `previous_status`, `meal` |
 
@@ -144,6 +145,24 @@ They are recognised in two ways:
   state naming the Trésor);
 - **by their number**, in the **Invoices sent to the Trésor public** field
   (the number the portal shows, e.g. `164513`).
+
+## Paying by direct debit
+
+When the bank pays your invoices on its own (prélèvement automatique, SEPA),
+there is nothing to pay on the portal. Tick **I pay by direct debit**:
+
+- the widget shows **To be debited** instead of **To pay**, and each invoice
+  with the **Direct debit** badge (blue);
+- the **next invoice** reads "45,20 € prélevés le 20/11/2026 — …" instead of
+  "avant le";
+- "invoice due soon" no longer fires for them;
+- "new invoice" still fires, with `direct_debit` true;
+- they stay counted in the **balance due**: the money is still owed until the
+  bank pays it.
+
+The portal does not say it in its invoice list. If one day it writes it in an
+invoice state ("prélèvement"…), the invoice is recognised without the box.
+An invoice sent to the Trésor public is never one: the bank no longer pays it.
 
 ## Troubleshooting
 

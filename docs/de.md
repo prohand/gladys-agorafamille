@@ -38,6 +38,7 @@ In Gladys: **Integrationen → Agora Famille → Konfiguration**.
 | **Beobachtete Planungstage**                   | Wie viele Tage im Voraus gelesen und überwacht werden (standardmäßig 14).                                                                                                               |
 | **Rechnungserinnerung (Tage)**                 | Der Auslöser „Rechnung bald fällig“ wird so viele Tage vor dem Fälligkeitsdatum ausgelöst (standardmäßig 3, 0 schaltet ihn ab).                                                         |
 | **An den Trésor public übergebene Rechnungen** | Nummern der Rechnungen, die die Gemeinde an den Trésor public übergeben hat, durch Kommas getrennt (z. B. `164513`). Siehe unten.                                                       |
+| **Ich zahle per Lastschrift**                  | Ankreuzen, wenn die Bank deine Rechnungen von selbst bezahlt (SEPA). Siehe unten.                                                                                                       |
 | **Ausführliche Protokolle**                    | Protokolliert jede Anfrage an das Portal, zur Fehlersuche. Nie das Passwort.                                                                                                            |
 
 Klicke dann auf **Verbindung testen**: Die Antwort nennt deine Kinder, die
@@ -82,8 +83,8 @@ solange das Portal nicht gelesen werden kann.
 
 | Auslöser                                | Wann                                                                                                                         | Variablen                                                             |
 | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| **Eine neue Rechnung wird ausgestellt** | Eine unbezahlte Rechnung erscheint.                                                                                          | `label`, `amount`, `due_date`, `invoice_id`                           |
-| **Eine Rechnung wird bald fällig**      | Eine unbezahlte Rechnung wird innerhalb der eingestellten Tage fällig. Nur einmal.                                           | `label`, `amount`, `due_date`, `days_left`, `invoice_id`              |
+| **Eine neue Rechnung wird ausgestellt** | Eine unbezahlte Rechnung erscheint.                                                                                          | `label`, `amount`, `due_date`, `invoice_id`, `direct_debit`           |
+| **Eine Rechnung wird bald fällig**      | Eine unbezahlte Rechnung wird innerhalb der eingestellten Tage fällig. Nur einmal. Nicht bei Lastschrift.                    | `label`, `amount`, `due_date`, `days_left`, `invoice_id`              |
 | **Eine Nachricht wird empfangen**       | Die Gemeinde hat eine Nachricht gesendet.                                                                                    | `subject`, `sender`, `date`                                           |
 | **Eine Buchung ändert sich**            | Ein gebuchter oder angefragter Tag ändert seinen Status (angenommen, abgelehnt, storniert…). Nach Kind und Status filterbar. | `child_name`, `activity`, `date`, `status`, `previous_status`, `meal` |
 
@@ -145,6 +146,26 @@ Sie werden auf zwei Arten erkannt:
   Mahnverfahren oder ein Status, der den Trésor nennt);
 - **über ihre Nummer** im Feld **An den Trésor public übergebene Rechnungen**
   (die im Portal angezeigte Nummer, z. B. `164513`).
+
+## Zahlung per Lastschrift
+
+Wenn die Bank deine Rechnungen von selbst bezahlt (prélèvement automatique,
+SEPA), ist im Portal nichts zu bezahlen. Kreuze **Ich zahle per Lastschrift**
+an:
+
+- das Widget zeigt **Abzubuchen** statt **Zu zahlen**, und jede Rechnung mit
+  dem Abzeichen **Lastschrift** (blau);
+- die **nächste Rechnung** lautet „45,20 € prélevés le 20/11/2026 — …“ statt
+  „avant le“;
+- „Rechnung bald fällig“ wird für sie nicht mehr ausgelöst;
+- „neue Rechnung“ wird weiter ausgelöst, mit `direct_debit` auf wahr;
+- sie zählen weiter zum **offenen Betrag**: Das Geld ist geschuldet, bis die
+  Bank zahlt.
+
+Das Portal sagt es in seiner Rechnungsliste nicht. Schreibt es das eines Tages
+in den Status einer Rechnung („prélèvement“…), wird sie ohne das Kästchen
+erkannt. Eine an den Trésor public übergebene Rechnung ist nie eine: Die Bank
+zahlt sie nicht mehr.
 
 ## Fehlerbehebung
 

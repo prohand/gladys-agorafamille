@@ -39,6 +39,7 @@ En Gladys: **Integraciones → Agora Famille → Configuración**.
 | **Días de planificación seguidos**         | Cuántos días por adelantado se leen y vigilan (14 por defecto).                                                                                                                            |
 | **Aviso de factura (días)**                | El disparador «factura a punto de vencer» se activa estos días antes del vencimiento (3 por defecto, 0 lo desactiva).                                                                      |
 | **Facturas transmitidas al Trésor public** | Números de las facturas que el municipio transmitió al Trésor public, separados por comas (p. ej. `164513`). Vea más abajo.                                                                |
+| **Pago por domiciliación bancaria**        | Márquelo si el banco paga sus facturas solo (SEPA). Vea más abajo.                                                                                                                         |
 | **Registros detallados**                   | Registra cada petición al portal, para diagnosticar. Nunca la contraseña.                                                                                                                  |
 
 Pulse después **Probar la conexión**: la respuesta indica sus hijos, el
@@ -83,8 +84,8 @@ se puede leer el portal.
 
 | Disparador                     | Cuándo                                                                                                             | Variables                                                             |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------- |
-| **Se emite una nueva factura** | Aparece una factura impagada.                                                                                      | `label`, `amount`, `due_date`, `invoice_id`                           |
-| **Una factura vence pronto**   | Una factura impagada vence dentro de los días fijados. Una sola vez.                                               | `label`, `amount`, `due_date`, `days_left`, `invoice_id`              |
+| **Se emite una nueva factura** | Aparece una factura impagada.                                                                                      | `label`, `amount`, `due_date`, `invoice_id`, `direct_debit`           |
+| **Una factura vence pronto**   | Una factura impagada vence dentro de los días fijados. Una sola vez. No si está domiciliada.                       | `label`, `amount`, `due_date`, `days_left`, `invoice_id`              |
 | **Se recibe un mensaje**       | El municipio envió un mensaje.                                                                                     | `subject`, `sender`, `date`                                           |
 | **Una reserva cambia**         | Un día reservado o solicitado cambia de estado (aceptado, rechazado, cancelado…). Filtrable por niño y por estado. | `child_name`, `activity`, `date`, `status`, `previous_status`, `meal` |
 
@@ -146,6 +147,24 @@ Se reconocen de dos formas:
   que menciona el Trésor);
 - **por su número**, en el campo **Facturas transmitidas al Trésor public**
   (el número que muestra el portal, p. ej. `164513`).
+
+## Domiciliación bancaria
+
+Cuando el banco paga sus facturas solo (prélèvement automatique, SEPA), no hay
+nada que pagar en el portal. Marque **Pago por domiciliación bancaria**:
+
+- el widget muestra **A domiciliar** en lugar de **A pagar**, y cada factura
+  con la insignia **Domiciliación** (azul);
+- la **próxima factura** indica «45,20 € prélevés le 20/11/2026 — …» en lugar
+  de «avant le»;
+- «factura vence pronto» ya no se dispara para ellas;
+- «nueva factura» se sigue disparando, con `direct_debit` a verdadero;
+- siguen contando en el **saldo pendiente**: el dinero se debe hasta que el
+  banco paga.
+
+El portal no lo indica en su lista de facturas. Si algún día lo escribe en el
+estado de una factura («prélèvement»…), se reconoce sin la casilla. Una
+factura transmitida al Trésor public nunca lo es: el banco ya no la paga.
 
 ## Solución de problemas
 

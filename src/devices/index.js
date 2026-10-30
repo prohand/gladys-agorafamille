@@ -204,7 +204,13 @@ function describeNextInvoice(snapshot) {
     return 'Aucune facture à payer';
   }
   const amount = formatAmount(next.remaining, 'fr');
-  const due = next.dueOn ? ` avant le ${next.dueOn.split('-').reverse().join('/')}` : '';
+  const day = next.dueOn?.split('-').reverse().join('/');
+  // The bank pays it on its own: say so rather than "pay before".
+  const due = next.directDebit
+    ? ` prélevés${day ? ` le ${day}` : ''}`
+    : day
+      ? ` avant le ${day}`
+      : '';
   return truncate(`${amount} €${due} — ${next.label}`);
 }
 

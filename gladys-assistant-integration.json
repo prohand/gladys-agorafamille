@@ -190,6 +190,24 @@
       "default": ""
     },
     {
+      "key": "direct_debit",
+      "type": "boolean",
+      "label": {
+        "en": "I pay by direct debit",
+        "fr": "Je suis en prélèvement automatique",
+        "de": "Ich zahle per Lastschrift",
+        "es": "Pago por domiciliación bancaria"
+      },
+      "description": {
+        "en": "The bank pays the invoices on its own. They are shown as \"Direct debit\" instead of \"To pay\", still counted in the balance, and the \"invoice due soon\" trigger no longer fires for them.",
+        "fr": "La banque paie les factures toute seule. Elles sont montrées « Prélèvement » au lieu de « À payer », toujours comptées dans le reste à payer, et le déclencheur « facture bientôt à échéance » ne part plus pour elles.",
+        "de": "Die Bank bezahlt die Rechnungen von selbst. Sie werden als „Lastschrift“ statt „Offen“ angezeigt, weiter zum offenen Betrag gezählt, und der Auslöser „Rechnung bald fällig“ startet für sie nicht mehr.",
+        "es": "El banco paga las facturas solo. Se muestran como «Domiciliación» en lugar de «A pagar», siguen contando en el saldo pendiente y el disparador «factura vence pronto» ya no se lanza para ellas."
+      },
+      "required": false,
+      "default": false
+    },
+    {
       "key": "debug_logs",
       "type": "boolean",
       "label": {
@@ -275,6 +293,16 @@
             "de": "Rechnungsnummer",
             "es": "Número de factura"
           }
+        },
+        {
+          "key": "direct_debit",
+          "type": "boolean",
+          "label": {
+            "en": "Paid by direct debit",
+            "fr": "Payée par prélèvement",
+            "de": "Per Lastschrift bezahlt",
+            "es": "Pagada por domiciliación"
+          }
         }
       ]
     },
@@ -287,10 +315,10 @@
         "es": "Una factura vence pronto"
       },
       "description": {
-        "en": "An unpaid invoice reaches its due date within the days set in the configuration. Once per invoice.",
-        "fr": "Une facture impayée arrive à échéance dans le nombre de jours réglé dans la configuration. Une fois par facture.",
-        "de": "Eine unbezahlte Rechnung wird innerhalb der in der Konfiguration festgelegten Tage fällig. Einmal pro Rechnung.",
-        "es": "Una factura impagada vence dentro de los días fijados en la configuración. Una vez por factura."
+        "en": "An unpaid invoice reaches its due date within the days set in the configuration. Once per invoice. Not for invoices paid by direct debit.",
+        "fr": "Une facture impayée arrive à échéance dans le nombre de jours réglé dans la configuration. Une fois par facture. Pas pour les factures en prélèvement automatique.",
+        "de": "Eine unbezahlte Rechnung wird innerhalb der in der Konfiguration festgelegten Tage fällig. Einmal pro Rechnung. Nicht für Rechnungen per Lastschrift.",
+        "es": "Una factura impagada vence dentro de los días fijados en la configuración. Una vez por factura. No para las facturas domiciliadas."
       },
       "variables": [
         {

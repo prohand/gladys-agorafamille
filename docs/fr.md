@@ -39,6 +39,7 @@ Dans Gladys : **Intégrations → Agora Famille → Configuration**.
 | **Jours de planning suivis**             | Combien de jours à venir sont lus et surveillés (14 par défaut).                                                                                                                            |
 | **Rappel de facture (jours)**            | Le déclencheur « facture bientôt à échéance » part ce nombre de jours avant l'échéance (3 par défaut, 0 pour le couper).                                                                    |
 | **Factures transmises au Trésor public** | Numéros des factures que la commune a transmises au Trésor public, séparés par des virgules (ex. `164513`). Voir plus bas.                                                                  |
+| **Je suis en prélèvement automatique**   | À cocher si la banque paie vos factures toute seule (SEPA). Voir plus bas.                                                                                                                  |
 | **Logs détaillés**                       | Journalise chaque requête au portail, pour le dépannage. Jamais le mot de passe.                                                                                                            |
 
 Cliquez ensuite sur **Tester la connexion** : la réponse liste vos enfants, le
@@ -83,8 +84,8 @@ ne peut pas être lu.
 
 | Déclencheur                        | Quand                                                                                                  | Variables                                                             |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------- |
-| **Une nouvelle facture est émise** | Une facture impayée apparaît.                                                                          | `label`, `amount`, `due_date`, `invoice_id`                           |
-| **Une facture arrive à échéance**  | Une facture impayée arrive à échéance dans le délai réglé. Une seule fois.                             | `label`, `amount`, `due_date`, `days_left`, `invoice_id`              |
+| **Une nouvelle facture est émise** | Une facture impayée apparaît.                                                                          | `label`, `amount`, `due_date`, `invoice_id`, `direct_debit`           |
+| **Une facture arrive à échéance**  | Une facture impayée arrive à échéance dans le délai réglé. Une seule fois. Pas en prélèvement.         | `label`, `amount`, `due_date`, `days_left`, `invoice_id`              |
 | **Un message est reçu**            | La commune a envoyé un message.                                                                        | `subject`, `sender`, `date`                                           |
 | **Une réservation change**         | Un jour réservé ou demandé change d'état (accepté, refusé, annulé…). Filtrable par enfant et par état. | `child_name`, `activity`, `date`, `status`, `previous_status`, `meal` |
 
@@ -148,6 +149,26 @@ Elles sont reconnues de deux façons :
   état qui parle du Trésor) ;
 - **par leur numéro**, dans le champ **Factures transmises au Trésor public**
   (le numéro affiché sur le portail, ex. `164513`).
+
+## Prélèvement automatique
+
+Quand la banque paie vos factures toute seule (prélèvement automatique, SEPA),
+il n'y a rien à payer sur le portail. Cochez **Je suis en prélèvement
+automatique** :
+
+- le widget affiche **À prélever** au lieu de **À payer**, et chaque facture
+  avec le badge **Prélèvement** (bleu) ;
+- la **prochaine facture** affiche « 45,20 € prélevés le 20/11/2026 — … » au
+  lieu de « avant le » ;
+- « facture bientôt à échéance » ne part plus pour elles ;
+- « nouvelle facture » part toujours, avec `direct_debit` à vrai ;
+- elles restent comptées dans le **reste à payer** : l'argent est dû tant que
+  la banque n'a pas payé.
+
+Le portail ne le dit pas dans sa liste de factures. S'il l'écrit un jour dans
+l'état d'une facture (« prélèvement »…), elle est reconnue sans la case. Une
+facture transmise au Trésor public n'est jamais en prélèvement : la banque ne
+la paie plus.
 
 ## Dépannage
 

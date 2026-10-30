@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   RESERVATION_STATUS,
   isMeal,
+  markDirectDebit,
   markTreasury,
   parseAmount,
   parseChildren,
@@ -298,4 +299,48 @@ test('the invoice numbers a family types mark their invoices as sent to the Tré
     ],
   );
   assert.equal(markTreasury(invoices, []), invoices);
+});
+
+test('an invoice paid by direct debit is told by the portal when it says so', () => {
+  const invoices = parseInvoices([
+    { idInvoice: 1, total: 40, TOTAL_PAID: 0, STATUS: 'En attente de prélèvement' },
+    {
+      idInvoice: 2,
+      total: 40,
+      TOTAL_PAID: 0,
+      STATUS: 'Non payée',
+      modePaiement: 'Prélèvement SEPA',
+    },
+    { idInvoice: 3, total: 40, TOTAL_PAID: 0, STATUS: 'Non payée', isPrelevement: 1 },
+    { idInvoice: 4, total: 40, TOTAL_PAID: 0, STATUS: 'Non payée' },
+    // Sent to the Trésor public: the bank no longer pays it.
+    { idInvoice: 5, total: 40, TOTAL_PAID: 0, STATUS: 'Prélèvement rejeté', isLitigation: 1 },
+  ]);
+  assert.deepEqual(
+    invoices.map((invoice) => [invoice.id, invoice.paid, invoice.directDebit]),
+    [
+      ['1', false, true],
+      ['2', false, true],
+      ['3', false, true],
+      ['4', false, false],
+      ['5', false, false],
+    ],
+  );
+  // "Prélevée": the bank paid it.
+  assert.equal(parseInvoices([{ idInvoice: 6, total: 40, STATUS: 'Prélevée' }])[0].paid, true);
+});
+
+test('a family paying by direct debit marks every invoice but those at the Trésor', () => {
+  const invoices = parseInvoices([
+    { idInvoice: 1, total: 40, TOTAL_PAID: 0 },
+    { idInvoice: 2, total: 40, TOTAL_PAID: 0, isLitigation: 1 },
+  ]);
+  assert.deepEqual(
+    markDirectDebit(invoices, true).map((invoice) => [invoice.id, invoice.directDebit]),
+    [
+      ['1', true],
+      ['2', false],
+    ],
+  );
+  assert.equal(markDirectDebit(invoices, false), invoices);
 });

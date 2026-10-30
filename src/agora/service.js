@@ -11,7 +11,7 @@
 import { createLogger } from '../logging.js';
 import { AgoraClient, AgoraError, ERROR_CODES } from './client.js';
 import { addDays, dayOf } from './dates.js';
-import { markTreasury } from './parse.js';
+import { markDirectDebit, markTreasury } from './parse.js';
 import { buildSnapshot, diffSnapshots } from './snapshot.js';
 
 const logger = createLogger({ name: 'sync' });
@@ -65,9 +65,12 @@ export function createAgoraService({ config, store, fetch, now = () => new Date(
     // a portal without them answers 404, which is "nothing", not a failure;
     // the same holds while their request is not captured yet.
     const modules = {};
-    const invoices = markTreasury(
-      await optional(() => client.getInvoices(), 'invoices', modules),
-      config.treasuryInvoices,
+    const invoices = markDirectDebit(
+      markTreasury(
+        await optional(() => client.getInvoices(), 'invoices', modules),
+        config.treasuryInvoices,
+      ),
+      config.direct_debit,
     );
     const messages = await optional(() => client.getMessages(), 'messages', modules);
     return buildSnapshot({

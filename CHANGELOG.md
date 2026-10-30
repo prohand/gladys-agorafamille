@@ -10,6 +10,14 @@ Release.
 
 ## [Unreleased]
 
+### Added
+
+- Direct debit (prélèvement automatique): the new "I pay by direct debit" setting shows the
+  invoices as "Direct debit" instead of "To pay" (widget, next invoice, connection test). They
+  stay counted in the balance, no longer fire "invoice due soon", and "new invoice" carries a
+  new `direct_debit` variable. An invoice state naming the direct debit is recognised too, and
+  "Prélevée" now reads as paid.
+
 ## [2.0.1] - 2026-10-27
 
 ### Added

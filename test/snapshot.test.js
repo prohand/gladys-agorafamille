@@ -6,7 +6,9 @@ import {
   balanceOf,
   buildSnapshot,
   diffSnapshots,
+  directDebitInvoices,
   hasMeal,
+  invoicesToPay,
   treasuryInvoices,
   unpaidInvoices,
 } from '../src/agora/snapshot.js';
@@ -49,7 +51,13 @@ test('a new unpaid invoice and a new message are events', () => {
   assert.deepEqual(events, [
     {
       key: SCENE_TRIGGERS.INVOICE_ISSUED,
-      data: { invoice_id: 'F2', label: 'Facture F2', amount: 40, due_date: '2026-11-30' },
+      data: {
+        invoice_id: 'F2',
+        label: 'Facture F2',
+        amount: 40,
+        due_date: '2026-11-30',
+        direct_debit: false,
+      },
     },
     {
       key: SCENE_TRIGGERS.MESSAGE_RECEIVED,
@@ -159,4 +167,30 @@ test('an invoice sent to the Trésor public is set apart: not owed, never announ
   // Neither the one set apart nor a new one sent straight there is news.
   const { events } = diffSnapshots(before, after, { dueReminderDays: 30 });
   assert.deepEqual(events, []);
+});
+
+test('an invoice paid by direct debit is owed but never a reminder to pay', () => {
+  const before = snapshot({
+    invoices: [invoice('F1', { directDebit: true, dueOn: '2026-11-10' })],
+  });
+  const after = snapshot({
+    invoices: [
+      invoice('F1', { directDebit: true, dueOn: '2026-11-06' }),
+      invoice('F2', { directDebit: true, dueOn: '2026-11-05' }),
+    ],
+  });
+  // Still owed: the bank has not paid it yet.
+  assert.equal(balanceOf(after), 80);
+  assert.deepEqual(invoicesToPay(after), []);
+  assert.deepEqual(
+    directDebitInvoices(after).map((entry) => entry.id),
+    ['F2', 'F1'],
+  );
+  // A new one is news, said to be paid by direct debit; due soon is not.
+  const { events, reminded } = diffSnapshots(before, after, { dueReminderDays: 3 });
+  assert.deepEqual(
+    events.map((event) => [event.key, event.data.invoice_id, event.data.direct_debit]),
+    [[SCENE_TRIGGERS.INVOICE_ISSUED, 'F2', true]],
+  );
+  assert.deepEqual(reminded, []);
 });

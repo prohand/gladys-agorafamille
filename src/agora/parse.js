@@ -145,6 +145,11 @@ const FIELDS = {
   // collected by the Trésor public; the portal's own pay button then sends
   // the family to another provider (pay_invoices_component.js).
   litigation: ['isLitigation', 'is_litigation', 'contentieux', 'enContentieux'],
+  // Not in the invoice grid of the portals seen so far (October 2026): the
+  // SEPA mandate lives elsewhere. Read when a portal gives it, else the family
+  // says so in the configuration (see markDirectDebit).
+  directDebit: ['isPrelevement', 'estPrelevee', 'isDirectDebit', 'isSepa', 'IS_SEPA'],
+  paymentMode: ['modePaiement', 'mode_paiement', 'MODE_PAIEMENT', 'modeReglement', 'PAYMENT_MODE'],
   // The API (October 2026): `{ DATA: { count, data: [{ ID_NOTIFICATIONS,
   // SUBJECT, SENDER, SEND_DATE: "16/10/2026 09:58", IS_READ, BODY }] } }`.
   messageId: ['ID_NOTIFICATIONS', 'idMessage', 'id_message', 'idNotification', 'id'],
@@ -318,7 +323,11 @@ export function parseReservationStatus(value) {
  * paid to the Trésor. It is told by the portal (`isLitigation`, or a state
  * naming the Trésor), or by the family (see markTreasury).
  *
- * @returns {Array<{id: string, label: string, amount: number, remaining: number, issuedOn: ?string, dueOn: ?string, paid: boolean, treasury: boolean}>}
+ * `directDebit` marks an invoice the bank pays on its own (prélèvement
+ * automatique, SEPA): nothing for the family to do. Told by the portal when it
+ * says so, or by the family (see markDirectDebit).
+ *
+ * @returns {Array<{id: string, label: string, amount: number, remaining: number, issuedOn: ?string, dueOn: ?string, paid: boolean, treasury: boolean, directDebit: boolean}>}
  */
 export function parseInvoices(payload) {
   const invoices = [];
@@ -337,6 +346,7 @@ export function parseInvoices(payload) {
       parseAmount(first(entry, FIELDS.remaining)) ??
       (paidAmount === null ? null : exact(amount - paidAmount));
     const remaining = remainingValue ?? (paid ? 0 : amount);
+    const treasury = isTreasury(entry);
     invoices.push({
       id,
       label: text(first(entry, FIELDS.invoiceLabel)) ?? id,
@@ -346,7 +356,9 @@ export function parseInvoices(payload) {
       dueOn: parseDay(first(entry, FIELDS.dueOn)),
       // An amount left to pay says more than a label ("Partiellement payée").
       paid: remainingValue === null ? paid || remaining <= 0 : remainingValue <= 0,
-      treasury: isTreasury(entry),
+      treasury,
+      // The bank no longer pays an invoice sent to the Trésor public.
+      directDebit: !treasury && isDirectDebit(entry),
     });
   }
   return invoices.sort((a, b) => (b.issuedOn ?? '').localeCompare(a.issuedOn ?? ''));
@@ -359,6 +371,17 @@ function isTreasury(entry) {
   }
   const status = normalize(first(entry, FIELDS.invoiceStatus) ?? '');
   return /tresor|recouvr|contentieux|titre (de recette|emis)|dgfip/.test(status);
+}
+
+function isDirectDebit(entry) {
+  const flag = first(entry, FIELDS.directDebit);
+  if (flag !== undefined && flag !== null && flag !== '') {
+    return toBoolean(flag);
+  }
+  const said = normalize(
+    `${first(entry, FIELDS.paymentMode) ?? ''} ${first(entry, FIELDS.invoiceStatus) ?? ''}`,
+  );
+  return /prelev|sepa|domicili|direct debit/.test(said);
 }
 
 /**
@@ -388,6 +411,24 @@ export function markTreasury(invoices, numbers = []) {
   );
 }
 
+/**
+ * Mark as paid by direct debit every invoice the family owes: they told, in
+ * the configuration, that the bank pays the municipality on its own. An
+ * invoice sent to the Trésor public is not one of them: the bank no longer
+ * pays it.
+ *
+ * @param {Array<object>} invoices see parseInvoices
+ * @param {boolean} directDebit the family pays by direct debit
+ */
+export function markDirectDebit(invoices, directDebit = false) {
+  if (!directDebit) {
+    return invoices;
+  }
+  return invoices.map((invoice) =>
+    invoice.treasury ? invoice : { ...invoice, directDebit: true },
+  );
+}
+
 function parsePaid(entry) {
   const flag = first(entry, FIELDS.paid);
   if (flag !== undefined && flag !== null && flag !== '') {
@@ -397,7 +438,8 @@ function parsePaid(entry) {
   if (/impay|non pay|a payer|partiel|unpaid|attente|due/.test(status)) {
     return false;
   }
-  return /pay|regl|sold|paid|acquit/.test(status);
+  // "Prélevée": the bank paid it. "Prélèvement" alone says how, not whether.
+  return /pay|regl|sold|paid|acquit|\bprelevee?s?\b/.test(status);
 }
 
 /**

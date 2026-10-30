@@ -11,7 +11,13 @@ import { normalizeConfig } from './config.js';
 import { applyLogLevel, createLogger } from './logging.js';
 import { createAgoraService } from './agora/service.js';
 import { createStore } from './agora/store.js';
-import { balanceOf, treasuryInvoices, unpaidInvoices, unreadMessages } from './agora/snapshot.js';
+import {
+  balanceOf,
+  directDebitInvoices,
+  invoicesToPay,
+  treasuryInvoices,
+  unreadMessages,
+} from './agora/snapshot.js';
 import { STATE_HEARTBEAT_MS, buildDevices, buildStates, buildTransports } from './devices/index.js';
 import { SCENE_ACTIONS, createSceneActions, publishEvents } from './capabilities/scenes.js';
 import { FAMILY_WIDGET, createWidget } from './capabilities/widget.js';
@@ -220,7 +226,8 @@ export function describeSnapshot(snapshot) {
       }),
     ];
     if (snapshot.modules.invoices) {
-      const unpaid = unpaidInvoices(snapshot).length;
+      const unpaid = invoicesToPay(snapshot).length;
+      const debited = directDebitInvoices(snapshot).length;
       const balance = formatEuros(balanceOf(snapshot), language);
       parts.push(
         pick(language, {
@@ -230,6 +237,16 @@ export function describeSnapshot(snapshot) {
           es: `${unpaid} factura(s) por pagar, ${balance} en total.`,
         }),
       );
+      if (debited > 0) {
+        parts.push(
+          pick(language, {
+            en: `${debited} invoice(s) paid by direct debit, nothing to do.`,
+            fr: `${debited} facture(s) en prélèvement automatique, rien à faire.`,
+            de: `${debited} Rechnung(en) per Lastschrift, nichts zu tun.`,
+            es: `${debited} factura(s) por domiciliación bancaria, nada que hacer.`,
+          }),
+        );
+      }
       const treasury = treasuryInvoices(snapshot).length;
       if (treasury > 0) {
         parts.push(
