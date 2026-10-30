@@ -57,6 +57,19 @@ export function unpaidInvoices(snapshot) {
   return openInvoices(snapshot).filter((invoice) => !invoice.treasury);
 }
 
+/**
+ * The invoices the bank pays on its own (prélèvement automatique): still owed,
+ * so counted in the balance, but nothing for the family to do.
+ */
+export function directDebitInvoices(snapshot) {
+  return unpaidInvoices(snapshot).filter((invoice) => invoice.directDebit);
+}
+
+/** The invoices the family has to pay themselves. */
+export function invoicesToPay(snapshot) {
+  return unpaidInvoices(snapshot).filter((invoice) => !invoice.directDebit);
+}
+
 /** The invoices the portal shows unpaid but the Trésor public collects. */
 export function treasuryInvoices(snapshot) {
   return openInvoices(snapshot).filter((invoice) => invoice.treasury);
@@ -124,6 +137,8 @@ export function diffSnapshots(previous, current, { dueReminderDays, reminded = [
   const events = [];
   const remindedNow = new Set(reminded);
   const unpaid = unpaidInvoices(current);
+  // No "pay before" reminder for what the bank pays on its own.
+  const toPay = invoicesToPay(current);
 
   // Forget what is no longer to pay: an invoice paid then re-opened is
   // reminded of again.
@@ -136,7 +151,7 @@ export function diffSnapshots(previous, current, { dueReminderDays, reminded = [
   if (!previous) {
     // First read: everything already there is the starting point, the
     // invoices already close to their due date included.
-    for (const invoice of unpaid) {
+    for (const invoice of toPay) {
       if (isDueSoon(invoice, current.today, dueReminderDays)) {
         remindedNow.add(invoice.id);
       }
@@ -157,13 +172,14 @@ export function diffSnapshots(previous, current, { dueReminderDays, reminded = [
             label: invoice.label,
             amount: invoice.amount,
             due_date: invoice.dueOn,
+            direct_debit: invoice.directDebit === true,
           },
         });
       }
     }
   }
 
-  for (const invoice of unpaid) {
+  for (const invoice of toPay) {
     if (remindedNow.has(invoice.id) || !isDueSoon(invoice, current.today, dueReminderDays)) {
       continue;
     }

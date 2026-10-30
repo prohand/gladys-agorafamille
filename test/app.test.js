@@ -338,3 +338,32 @@ test('an invoice sent to the Trésor public is shown apart and not owed', async 
   assert.match(message.fr, /1 facture\(s\) à payer/);
   assert.match(message.fr, /1 facture\(s\) transmise\(s\) au Trésor public/);
 });
+
+test('a family paying by direct debit sees "Direct debit", not "To pay"', async (t) => {
+  const { gladys, app } = await start(family(), createMemoryStore(), { direct_debit: true });
+  t.after(() => app.stop());
+
+  const account = accountIds(gladys, config);
+  // Still owed until the bank pays it.
+  assert.equal(gladys.fake.lastState(account.feature(ACCOUNT_FEATURES.BALANCE)), 45.2);
+  assert.equal(
+    gladys.fake.lastState(account.feature(ACCOUNT_FEATURES.NEXT_INVOICE)),
+    '45,20 € prélevés le 20/11/2026 — Octobre 2026',
+  );
+
+  const ack = await gladys.fake.widgetGet(FAMILY_WIDGET, { settings: {}, language: 'fr' });
+  const content = ack.data.content ?? ack.data;
+  assert.deepEqual(validateWidgetContent(content), []);
+  const focal = content.components.find((component) => component.type === 'value');
+  assert.deepEqual([focal.label, focal.value], ['À prélever', '45,20']);
+  const cards = content.components.find((component) => component.type === 'card-list').items;
+  assert.deepEqual(
+    [cards[0].title, cards[0].badge.text, cards[0].badge.color],
+    ['Octobre 2026', 'Prélèvement', 'info'],
+  );
+
+  const answer = await gladys.fake.action('test_connection', {});
+  const message = answer.data.message ?? answer.data;
+  assert.match(message.fr, /0 facture\(s\) à payer/);
+  assert.match(message.fr, /1 facture\(s\) en prélèvement automatique, rien à faire/);
+});

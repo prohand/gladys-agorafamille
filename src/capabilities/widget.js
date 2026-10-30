@@ -19,6 +19,7 @@ import { RESERVATION_STATUS } from '../agora/parse.js';
 import {
   balanceOf,
   dayEntries,
+  directDebitInvoices,
   expectedActivities,
   treasuryInvoices,
   unpaidInvoices,
@@ -85,7 +86,11 @@ export function buildWidgetContent({ config, snapshot, error, language = 'en' })
   const components = [
     {
       type: 'value',
-      label: say({ en: 'To pay', fr: 'À payer', de: 'Zu zahlen', es: 'A pagar' }),
+      label: say(
+        allByDirectDebit(snapshot, config)
+          ? { en: 'To be debited', fr: 'À prélever', de: 'Abzubuchen', es: 'A domiciliar' }
+          : { en: 'To pay', fr: 'À payer', de: 'Zu zahlen', es: 'A pagar' },
+      ),
       icon: 'credit-card',
       value: formatAmount(balanceOf(snapshot), language),
       unit: '€',
@@ -130,6 +135,18 @@ export function buildWidgetContent({ config, snapshot, error, language = 'en' })
   return { ttl_seconds: 900, components };
 }
 
+/**
+ * Whether what is owed is all paid by the bank on its own: then it is "to be
+ * debited", not "to pay". With nothing owed, the configuration says.
+ */
+function allByDirectDebit(snapshot, config) {
+  const unpaid = unpaidInvoices(snapshot);
+  if (unpaid.length === 0) {
+    return config.direct_debit === true;
+  }
+  return directDebitInvoices(snapshot).length === unpaid.length;
+}
+
 /** Two rows per child: today and tomorrow. */
 function childRows(snapshot, language) {
   if (!snapshot) {
@@ -170,8 +187,9 @@ function childRows(snapshot, language) {
 }
 
 /**
- * The invoices to pay first, then the ones sent to the Trésor public (in
- * grey: not counted in what is owed), then the unread messages.
+ * The invoices owed first (to pay, or paid by direct debit), then the ones
+ * sent to the Trésor public (in grey: not counted in what is owed), then the
+ * unread messages.
  */
 function buildCards(snapshot, language) {
   if (!snapshot) {
@@ -180,6 +198,15 @@ function buildCards(snapshot, language) {
   const cards = [];
   for (const invoice of unpaidInvoices(snapshot)) {
     const left = invoice.dueOn ? daysBetween(snapshot.today, invoice.dueOn) : null;
+    if (invoice.directDebit) {
+      cards.push({
+        title: cut(invoice.label, LIMITS.cardTitle),
+        subtitle: formatEuros(invoice.remaining, language),
+        ...(invoice.dueOn ? { date: invoice.dueOn } : {}),
+        badge: { text: pick(language, DIRECT_DEBIT_BADGE), color: WIDGET_COLORS.INFO },
+      });
+      continue;
+    }
     cards.push({
       title: cut(invoice.label, LIMITS.cardTitle),
       subtitle: formatEuros(invoice.remaining, language),
@@ -223,6 +250,13 @@ function buildCards(snapshot, language) {
   }
   return cards.slice(0, MAX_CARDS);
 }
+
+const DIRECT_DEBIT_BADGE = {
+  en: 'Direct debit',
+  fr: 'Prélèvement',
+  de: 'Lastschrift',
+  es: 'Domiciliación',
+};
 
 const TREASURY_BADGE = { en: 'Treasury', fr: 'Trésor public', de: 'Staatskasse', es: 'Tesoro' };
 
