@@ -10,6 +10,10 @@ Release.
 
 ## [Unreleased]
 
+## [2.0.3] - 2026-10-30
+
+- Maintenance release, no functional change.
+
 ## [2.0.2] - 2026-10-30
 
 ### Added
@@ -90,7 +94,8 @@ Release.
 - CI (Prettier, ESLint, tests on Node 22 and 24, store checks, Docker build), UI-driven
   Release, multi-arch build, GitHub Releases and Dependabot.
 
-[Unreleased]: https://github.com/prohand/gladys-agorafamille/compare/v2.0.2...HEAD
+[Unreleased]: https://github.com/prohand/gladys-agorafamille/compare/v2.0.3...HEAD
+[2.0.3]: https://github.com/prohand/gladys-agorafamille/compare/v2.0.2...v2.0.3
 [2.0.2]: https://github.com/prohand/gladys-agorafamille/compare/v2.0.1...v2.0.2
 [2.0.1]: https://github.com/prohand/gladys-agorafamille/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/prohand/gladys-agorafamille/releases/tag/v2.0.0
