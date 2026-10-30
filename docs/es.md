@@ -154,7 +154,7 @@ Cuando el banco paga sus facturas solo (prélèvement automatique, SEPA), no hay
 nada que pagar en el portal. Marque **Pago por domiciliación bancaria**:
 
 - el widget muestra **A domiciliar** en lugar de **A pagar**, y cada factura
-  con la insignia **Domiciliación** (azul);
+  con el día del cargo en su insignia azul (**Cargo el 24/11**) y su importe;
 - la **próxima factura** indica «45,20 € prélevés le 20/11/2026 — …» en lugar
   de «avant le»;
 - «factura vence pronto» ya no se dispara para ellas;

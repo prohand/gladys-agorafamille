@@ -199,11 +199,13 @@ function buildCards(snapshot, language) {
   for (const invoice of unpaidInvoices(snapshot)) {
     const left = invoice.dueOn ? daysBetween(snapshot.today, invoice.dueOn) : null;
     if (invoice.directDebit) {
+      // The day goes in the badge: a bare date under the title does not say
+      // it is the day of the debit. Without it, the row shows the amount.
       cards.push({
         title: cut(invoice.label, LIMITS.cardTitle),
         subtitle: formatEuros(invoice.remaining, language),
-        ...(invoice.dueOn ? { date: invoice.dueOn } : {}),
-        badge: { text: pick(language, DIRECT_DEBIT_BADGE), color: WIDGET_COLORS.INFO },
+        badge: { text: directDebitBadge(invoice.dueOn, language), color: WIDGET_COLORS.INFO },
+        description: directDebitNote(invoice, language),
       });
       continue;
     }
@@ -257,6 +259,39 @@ const DIRECT_DEBIT_BADGE = {
   de: 'Lastschrift',
   es: 'Domiciliación',
 };
+
+/** "Prélevé le 24/11": a badge holds 16 characters, so no year, no weekday. */
+function directDebitBadge(day, language) {
+  if (!day) {
+    return pick(language, DIRECT_DEBIT_BADGE);
+  }
+  const [, month, date] = day.split('-');
+  return pick(language, {
+    en: `Debit on ${date}/${month}`,
+    fr: `Prélevé le ${date}/${month}`,
+    de: `Abbuchung ${date}.${month}.`,
+    es: `Cargo el ${date}/${month}`,
+  });
+}
+
+function directDebitNote(invoice, language) {
+  const amount = formatEuros(invoice.remaining, language);
+  if (!invoice.dueOn) {
+    return pick(language, {
+      en: `${amount} paid by direct debit: nothing to do.`,
+      fr: `${amount} payés par prélèvement automatique : rien à faire.`,
+      de: `${amount} per Lastschrift bezahlt: nichts zu tun.`,
+      es: `${amount} pagados por domiciliación bancaria: nada que hacer.`,
+    });
+  }
+  const day = invoice.dueOn.split('-').reverse().join('/');
+  return pick(language, {
+    en: `${amount} taken by direct debit on ${day} (the due date of the portal): nothing to do.`,
+    fr: `${amount} prélevés le ${day} (date d'échéance du portail) : rien à faire.`,
+    de: `${amount} werden am ${day.replaceAll('/', '.')} abgebucht (Fälligkeit laut Portal): nichts zu tun.`,
+    es: `${amount} cargados el ${day} (vencimiento del portal): nada que hacer.`,
+  });
+}
 
 const TREASURY_BADGE = { en: 'Treasury', fr: 'Trésor public', de: 'Staatskasse', es: 'Tesoro' };
 

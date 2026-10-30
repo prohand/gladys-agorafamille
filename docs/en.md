@@ -152,7 +152,8 @@ When the bank pays your invoices on its own (prélèvement automatique, SEPA),
 there is nothing to pay on the portal. Tick **I pay by direct debit**:
 
 - the widget shows **To be debited** instead of **To pay**, and each invoice
-  with the **Direct debit** badge (blue);
+  with the day of the debit in its blue badge (**Debit on 24/11**) and its
+  amount;
 - the **next invoice** reads "45,20 € prélevés le 20/11/2026 — …" instead of
   "avant le";
 - "invoice due soon" no longer fires for them;

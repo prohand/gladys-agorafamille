@@ -154,7 +154,8 @@ SEPA), ist im Portal nichts zu bezahlen. Kreuze **Ich zahle per Lastschrift**
 an:
 
 - das Widget zeigt **Abzubuchen** statt **Zu zahlen**, und jede Rechnung mit
-  dem Abzeichen **Lastschrift** (blau);
+  dem Tag der Abbuchung im blauen Abzeichen (**Abbuchung 24.11.**) und ihrem
+  Betrag;
 - die **nächste Rechnung** lautet „45,20 € prélevés le 20/11/2026 — …“ statt
   „avant le“;
 - „Rechnung bald fällig“ wird für sie nicht mehr ausgelöst;

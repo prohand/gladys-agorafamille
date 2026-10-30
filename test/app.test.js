@@ -357,10 +357,13 @@ test('a family paying by direct debit sees "Direct debit", not "To pay"', async 
   const focal = content.components.find((component) => component.type === 'value');
   assert.deepEqual([focal.label, focal.value], ['À prélever', '45,20']);
   const cards = content.components.find((component) => component.type === 'card-list').items;
+  // The day of the debit is in the badge, the one text a row always shows.
   assert.deepEqual(
-    [cards[0].title, cards[0].badge.text, cards[0].badge.color],
-    ['Octobre 2026', 'Prélèvement', 'info'],
+    [cards[0].title, cards[0].date, cards[0].badge.text, cards[0].badge.color],
+    ['Octobre 2026', undefined, 'Prélevé le 20/11', 'info'],
   );
+  assert.match(cards[0].subtitle, /^45,20\s€$/);
+  assert.match(cards[0].description, /prélevés le 20\/11\/2026/);
 
   const answer = await gladys.fake.action('test_connection', {});
   const message = answer.data.message ?? answer.data;

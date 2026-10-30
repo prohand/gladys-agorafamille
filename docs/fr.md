@@ -157,7 +157,8 @@ il n'y a rien à payer sur le portail. Cochez **Je suis en prélèvement
 automatique** :
 
 - le widget affiche **À prélever** au lieu de **À payer**, et chaque facture
-  avec le badge **Prélèvement** (bleu) ;
+  avec la date du prélèvement dans son badge bleu (**Prélevé le 24/11**) et
+  son montant ;
 - la **prochaine facture** affiche « 45,20 € prélevés le 20/11/2026 — … » au
   lieu de « avant le » ;
 - « facture bientôt à échéance » ne part plus pour elles ;
